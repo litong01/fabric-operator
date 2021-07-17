@@ -1,0 +1,15 @@
+---
+# defaults file for CA
+# name of the CA node, required
+name: ca1
+# domain of the CA node. if missing, the local name will be used.
+domain: sample.com
+# cert for the CA node. If not specified, operator will create
+# self signed certs and certificates based on the configured
+# name and domain name. Each value should be based 64 encoded
+# certificate
+certs:
+  caCert:
+  key:
+  tlsCert:
+  tlsKey:

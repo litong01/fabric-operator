@@ -1,0 +1,91 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+  ##
+  ## Base operator rules
+  ##
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - pods
+      - pods/exec
+      - pods/log
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Orderer
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - orderers
+      - orderers/status
+      - orderers/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: CA
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - cas
+      - cas/status
+      - cas/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Peer
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - peers
+      - peers/status
+      - peers/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+#+kubebuilder:scaffold:rules

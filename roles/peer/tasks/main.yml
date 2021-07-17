@@ -1,0 +1,13 @@
+---
+# tasks file for Peer
+- name: create a secret
+  community.kubernetes.k8s:
+    definition:
+      kind: Secret
+      apiVersion: v1
+      metadata:
+        name: '{{ ansible_operator_meta.name }}-mysecret'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      type: Opaque
+      data:
+        extra: YmFyCG==

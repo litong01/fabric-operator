@@ -1,0 +1,15 @@
+---
+# Use the 'create api' subcommand to add watches to this file.
+- version: v1alpha1
+  group: operator.fabric.hyperledger.org
+  kind: Orderer
+  role: orderer
+- version: v1alpha1
+  group: operator.fabric.hyperledger.org
+  kind: CA
+  role: ca
+- version: v1alpha1
+  group: operator.fabric.hyperledger.org
+  kind: Peer
+  role: peer
+#+kubebuilder:scaffold:watch
