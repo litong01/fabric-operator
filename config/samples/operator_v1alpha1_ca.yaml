@@ -4,4 +4,4 @@ metadata:
   name: ca-sample
 spec:
   # Add fields here
-  size: 1
+  domain: example.com

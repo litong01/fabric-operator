@@ -1,5 +1,31 @@
 ---
-- name: create a secret
+- name: Get the home directory
+  set_fact:
+    workdir: "{{ lookup('env','HOME') }}/vars"
+    nodename: "{{ ansible_operator_meta.name }}.{{ domain }}"
+
+- name: Make sure that working directory exists
+  file:
+    path: "{{ workdir }}"
+    state: "directory"
+    mode: 0775
+
+- name: Generate an Certificate Signing Request
+  community.crypto.openssl_csr:
+    path: "{{ workdir }}/{{ nodename}}.csr"
+    privatekey_path: "{{ workdir }}/{{ nodename }}.key"
+    country_name: US
+    organization_name: CA
+    common_name: "{{ nodename }}"
+
+- name: Generate a certificate based on CSR
+  community.crypto.x509_certificate:
+    path: "{{ workdir }}/{{ nodename }}.crt"
+    privatekey_path: "{{ workdir }}/{{ nodename }}.key"
+    csr_path: "{{ workdir }}/{{ nodename}}.csr"
+    provider: selfsigned
+
+- name: Create a secret
   community.kubernetes.k8s:
     definition:
       kind: Secret
