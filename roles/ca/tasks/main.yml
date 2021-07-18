@@ -4,44 +4,87 @@
     workdir: "{{ lookup('env','HOME') }}/vars"
     nodename: "{{ ansible_operator_meta.name }}.{{ domain }}"
 
-- name: Make sure that working directory exists
-  file:
-    path: "{{ workdir }}"
-    state: "directory"
-    mode: 0775
+- name: Create canonical name for the node
+  set_fact:
+    cnodename: "{{ nodename | replace('.', '-') | lower }}"
 
-- name: Generate a private key
-  community.crypto.openssl_privatekey:
-    path: "{{ workdir }}/{{ nodename }}.key"
-    curve: secp256r1
-    type: ECC
+- name: Retrieve the CA certificate
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ cnodename }}-certs'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: ca_certs
 
-- name: Generate an Certificate Signing Request
-  community.crypto.openssl_csr:
-    path: "{{ workdir }}/{{ nodename}}.csr"
-    privatekey_path: "{{ workdir }}/{{ nodename }}.key"
-    country_name: US
-    organization_name: CA
-    common_name: "{{ nodename }}"
+- debug:
+    var: ca_certs
 
-- name: Generate a certificate based on CSR
-  community.crypto.x509_certificate:
-    path: "{{ workdir }}/{{ nodename }}.crt"
-    privatekey_path: "{{ workdir }}/{{ nodename }}.key"
-    csr_path: "{{ workdir }}/{{ nodename}}.csr"
-    provider: selfsigned
+- name: Generate certificates when there is none
+  when: ca_certs.resources | length == 0
+  block:
+  - debug:
+      msg: "Certs do not exist, now create them"
 
-- name: Create a secret
-  community.kubernetes.k8s:
-    definition:
-      kind: Secret
-      apiVersion: v1
-      metadata:
-        name: '{{ ansible_operator_meta.name }}-mysecret'
-        namespace: '{{ ansible_operator_meta.namespace }}'
-      type: Opaque
-      data:
-        extra: YmFyCG==
+  - name: Make sure that working directory exists
+    file:
+      path: "{{ workdir }}/keys"
+      state: "directory"
+      mode: 0775
+  
+  - name: Generate a private keys
+    community.crypto.openssl_privatekey:
+      path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
+      curve: secp256r1
+      type: ECC
+    with_items:
+    - "ca"
+    - "tls"
+  
+  - name: Generate an Certificate Signing Request
+    community.crypto.openssl_csr:
+      path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}.csr"
+      privatekey_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
+      country_name: US
+      organization_name: CA
+      common_name: "{{ nodename }}"
+    with_items:
+    - "ca"
+    - "tls"
+  
+  - name: Generate a certificate based on CSR
+    community.crypto.x509_certificate:
+      path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-cert.pem"
+      privatekey_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
+      csr_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}.csr"
+      key_usage:
+      - critical
+      - digitalSignature
+      - keyEncipherment
+      - keyCertSign
+      - cRLSign
+      extended_key_usage:
+      - clientAuth
+      - serverAuth
+      provider: selfsigned
+    with_items:
+    - "ca"
+    - "tls"
+  
+  - name: Create a secret
+    community.kubernetes.k8s:
+      definition:
+        kind: Secret
+        apiVersion: v1
+        metadata:
+          name: '{{ cnodename }}-certs'
+          namespace: '{{ ansible_operator_meta.namespace }}'
+        type: Opaque
+        data:
+          ca-cert.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-ca-cert.pem', errors='ignore') | b64encode }}"
+          ca-key.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-ca-key.pem', errors='ignore') | b64encode }}"
+          tls-cert.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-tls-cert.pem', errors='ignore') | b64encode }}"
+          tls-key.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-tls-key.pem', errors='ignore') | b64encode }}"
+
 - name: start memcached
   community.kubernetes.k8s:
     definition:

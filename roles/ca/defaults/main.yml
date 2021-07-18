@@ -1,21 +1,39 @@
 ---
-# defaults file for CA
-# domain of the CA node. if missing, the local name will be used.
-domain: sample.com
-# cert for the CA node. If not specified, operator will create
-# self signed certs and certificates based on the configured
-# name and domain name. Each value should be based 64 encoded
-# certificate
-certs:
-  caCert:
-  key:
-  tlsCert:
-  tlsKey:
-# admin id and password secret, the default will be the CA node
-# name, domain name + adminSecret, character dot will be replaced
-# by underscore. For example, the secert name for this spec will
-# be ca1_sample_com_admin_secret.
-adminSecret:
+# default configuration for CA node
 
-#
-certSecret:
+# domain of the CA node. if missing, the local name will be used.
+domain:
+
+# Certificate for the CA node will be saved as k8s secret. The name
+# of the secret is configurable, this is to allow users to use
+# their own certificate. If the secret name is left empty, then
+# this operator will automatically generate self signed certificates
+# based on the given domain name and name of the ca node. The name
+# of the secret will be the concatnation of the ca node name
+# domain name and ca certs. For example, if the ca node name is ca1
+# domain name is example.com, then the ca secret name will be
+# ca1-example-com-certs. The generated cert, private key and tls
+# cert, key will be saved in the secret in the following format
+# 
+# data:
+#   ca-cert.pem: <base64 encoded>
+#   ca-key.pem: <base64 encoded>
+#   tls-cert.pem: <base64 encoded>
+#   tls-key.pem: <base64 encoded>
+certs:
+
+# admin id and password secret. When setup CA node, the node must
+# be configured with id and password for admin. If not specified
+# the operator will generate one using admin as username and a random
+# string as password. Then saved the id and password in a k8s basic
+# authentication secret named using the combination of the CA name,
+# domain name + admin, character dot in either node name or
+# domain name will be replaced by character dash. For example,
+# if the ca node name is ca1, domain name is example.com, then the
+# this secret name will be ca1-example-com-admin. The secret must
+# follow this format:
+#   username: <admin by default>
+#   password: <password>
+admin:
+
+size: 2
