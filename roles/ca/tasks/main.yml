@@ -10,6 +10,12 @@
     state: "directory"
     mode: 0775
 
+- name: Generate a private key
+  community.crypto.openssl_privatekey:
+    path: "{{ workdir }}/{{ nodename }}.key"
+    curve: secp256r1
+    type: ECC
+
 - name: Generate an Certificate Signing Request
   community.crypto.openssl_csr:
     path: "{{ workdir }}/{{ nodename}}.csr"
