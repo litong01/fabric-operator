@@ -35,5 +35,3 @@ certs:
 #   username: <admin by default>
 #   password: <password>
 admin:
-
-size: 2

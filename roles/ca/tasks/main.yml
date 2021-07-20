@@ -2,22 +2,51 @@
 - name: Get the home directory
   set_fact:
     workdir: "{{ lookup('env','HOME') }}/vars"
-    nodename: "{{ ansible_operator_meta.name }}.{{ domain }}"
+    nodename: "{{ ansible_operator_meta.name }}{{ (domain==None)|ternary('', '.'+domain) }}"
 
 - name: Create canonical name for the node
   set_fact:
     cnodename: "{{ nodename | replace('.', '-') | lower }}"
 
+- name: Create canonical name for the certs and admin secret
+  set_fact:
+    adminsecretname: "{{ ((admin == None or (admin|trim) == '')) | ternary(cnodename+'-admin', admin) }}"
+    cacertsecretname: "{{ ((certs == None or (certs|trim) == '')) | ternary(cnodename+'-certs', certs) }}"
+
+- name: Retrieve the CA admin secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ adminsecretname }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: ca_admin
+
+- name: Generate admin username and pw when there is none
+  when: ca_admin.resources | length == 0
+  block:
+  - debug:
+      msg: "Admin secret do not exist, now create basic auth secret"
+
+  - name: Create admin secret
+    community.kubernetes.k8s:
+      definition:
+        kind: Secret
+        apiVersion: v1
+        metadata:
+          name: '{{ adminsecretname }}'
+          namespace: '{{ ansible_operator_meta.namespace }}'
+        type: kubernetes.io/basic-auth
+        stringData:
+          username: admin
+          password: "{{ lookup('community.general.random_string', length=12) }}"
+
 - name: Retrieve the CA certificate
   community.kubernetes.k8s_info:
     kind: Secret
     api_version: v1
-    name: '{{ cnodename }}-certs'
+    name: '{{ cacertsecretname }}'
     namespace: '{{ ansible_operator_meta.namespace }}'
   register: ca_certs
-
-- debug:
-    var: ca_certs
 
 - name: Generate certificates when there is none
   when: ca_certs.resources | length == 0
@@ -49,7 +78,7 @@
         ST: "North Carolina"
         L: "Raleigh"
         O: "{{ domain }}"
-      subject_alt_name: "DNS:{{ nodename }}"
+      subject_alt_name: "DNS:{{ nodename }}{{ (domain==None)|ternary('', ',DNS:'+domain) }}"
       common_name: "{{ nodename }}"
       basic_constraints_critical: yes
       basic_constraints: 
@@ -84,7 +113,7 @@
         kind: Secret
         apiVersion: v1
         metadata:
-          name: '{{ cnodename }}-certs'
+          name: '{{ cacertsecretname }}'
           namespace: '{{ ansible_operator_meta.namespace }}'
         type: Opaque
         data:
@@ -101,7 +130,7 @@
       metadata:
         labels:
           k8s-app: '{{ cnodename }}'
-        name: '{{ cnodename }}'
+        name: '{{ ansible_operator_meta.name }}'
         namespace: '{{ ansible_operator_meta.namespace }}'
       spec:
         selector:
@@ -117,7 +146,7 @@
       kind: StatefulSet
       apiVersion: apps/v1
       metadata:
-        name: '{{ cnodename }}'
+        name: '{{ ansible_operator_meta.name }}'
         namespace: '{{ ansible_operator_meta.namespace }}'
       spec:
         selector:
@@ -126,7 +155,7 @@
             hlf-type: ca
             hlf-dn: '{{ domain }}'
             hlf-mspid: '{{ cnodename }}'
-        serviceName: '{{ cnodename }}'
+        serviceName: '{{ ansible_operator_meta.name }}'
         replicas: 1
         volumeClaimTemplates:
         - metadata:
@@ -136,7 +165,7 @@
             - ReadWriteOnce
             resources:
               requests:
-                storage: 1Gi
+                storage: 2Gi
         template:
           metadata:
             labels:
@@ -148,10 +177,10 @@
             volumes:
             - name: cert-key-id
               secret:
-                secretName: '{{ cnodename }}-certs'
+                secretName: '{{ cacertsecretname }}'
             containers:
             - name: fabric-ca
-              image: hyperledger/fabric-ca:1.4
+              image: hyperledger/fabric-ca:1.5
               imagePullPolicy: IfNotPresent
               env:
               - { name: "FABRIC_CA_HOME", value: "/etc/hyperledger/fabric-ca-server" }
@@ -161,8 +190,18 @@
               - { name: "FABRIC_CA_SERVER_TLS_ENABLED", value: "true" }
               - { name: "FABRIC_CA_SERVER_TLS_KEYFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-key.pem" }
               - { name: "FABRIC_CA_SERVER_TLS_CERTFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-cert.pem" }
+              - name: CA_USERNAME
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ adminsecretname }}'
+                    key: username
+              - name: CA_PASSWORD
+                valueFrom:
+                  secretKeyRef:
+                    name: '{{ adminsecretname }}'
+                    key: password
               volumeMounts:
               - { mountPath: "/etc/hyperledger/fabric-ca/idcerts", name: "cert-key-id" }
               - { mountPath: "/etc/hyperledger/fabric-ca-server", name: "{{ cnodename }}-data" }
               command: ["fabric-ca-server"]
-              args:  ["start", "-b", "admin:adminpw", "-d"]
+              args:  ["start", "-b", "$(CA_USERNAME):$(CA_PASSWORD)", "-d"]
