@@ -44,9 +44,26 @@
     community.crypto.openssl_csr:
       path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}.csr"
       privatekey_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
-      country_name: US
-      organization_name: CA
+      subject:
+        C: US
+        ST: "North Carolina"
+        L: "Raleigh"
+        O: "{{ domain }}"
+      subject_alt_name: "DNS:{{ nodename }}"
       common_name: "{{ nodename }}"
+      basic_constraints_critical: yes
+      basic_constraints: 
+      - 'CA:TRUE'
+      key_usage:
+      - digitalSignature
+      - keyEncipherment
+      - keyCertSign
+      - cRLSign
+      key_usage_critical: yes
+      extended_key_usage:
+      - clientAuth
+      - serverAuth
+      extended_key_usage_critical: yes
     with_items:
     - "ca"
     - "tls"
@@ -56,15 +73,6 @@
       path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-cert.pem"
       privatekey_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
       csr_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}.csr"
-      key_usage:
-      - critical
-      - digitalSignature
-      - keyEncipherment
-      - keyCertSign
-      - cRLSign
-      extended_key_usage:
-      - clientAuth
-      - serverAuth
       provider: selfsigned
     with_items:
     - "ca"
@@ -85,32 +93,76 @@
           tls-cert.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-tls-cert.pem', errors='ignore') | b64encode }}"
           tls-key.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-tls-key.pem', errors='ignore') | b64encode }}"
 
-- name: start memcached
+- name: start ca service
   community.kubernetes.k8s:
     definition:
-      kind: Deployment
-      apiVersion: apps/v1
+      kind: Service
+      apiVersion: v1
       metadata:
-        name: '{{ ansible_operator_meta.name }}-memcached'
+        labels:
+          k8s-app: '{{ cnodename }}'
+        name: '{{ cnodename }}'
         namespace: '{{ ansible_operator_meta.namespace }}'
       spec:
-        replicas: "{{size}}"
+        selector:
+          k8s-app: '{{ cnodename }}'
+        ports:
+        - name: caport
+          port: 7054
+          targetPort: 7054
+
+- name: start ca node
+  community.kubernetes.k8s:
+    definition:
+      kind: StatefulSet
+      apiVersion: apps/v1
+      metadata:
+        name: '{{ cnodename }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
         selector:
           matchLabels:
-            app: memcached
+            k8s-app: '{{ cnodename }}'
+            hlf-type: ca
+            hlf-dn: '{{ domain }}'
+            hlf-mspid: '{{ cnodename }}'
+        serviceName: '{{ cnodename }}'
+        replicas: 1
+        volumeClaimTemplates:
+        - metadata:
+            name: '{{ cnodename }}-data'
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 1Gi
         template:
           metadata:
             labels:
-              app: memcached
+              k8s-app: '{{ cnodename }}'
+              hlf-type: ca
+              hlf-dn: '{{ domain }}'
+              hlf-mspid: '{{ cnodename }}'
           spec:
+            volumes:
+            - name: cert-key-id
+              secret:
+                secretName: '{{ cnodename }}-certs'
             containers:
-            - name: memcached
-              command:
-              - memcached
-              - -m=64
-              - -o
-              - modern
-              - -v
-              image: "docker.io/memcached:1.4.36-alpine"
-              ports:
-                - containerPort: 11211
+            - name: fabric-ca
+              image: hyperledger/fabric-ca:1.4
+              imagePullPolicy: IfNotPresent
+              env:
+              - { name: "FABRIC_CA_HOME", value: "/etc/hyperledger/fabric-ca-server" }
+              - { name: "FABRIC_CA_SERVER_CA_NAME", value: "{{ nodename}}" }
+              - { name: "FABRIC_CA_SERVER_CA_KEYFILE", value: "/etc/hyperledger/fabric-ca/idcerts/ca-key.pem" }
+              - { name: "FABRIC_CA_SERVER_CA_CERTFILE", value: "/etc/hyperledger/fabric-ca/idcerts/ca-cert.pem" }
+              - { name: "FABRIC_CA_SERVER_TLS_ENABLED", value: "true" }
+              - { name: "FABRIC_CA_SERVER_TLS_KEYFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-key.pem" }
+              - { name: "FABRIC_CA_SERVER_TLS_CERTFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-cert.pem" }
+              volumeMounts:
+              - { mountPath: "/etc/hyperledger/fabric-ca/idcerts", name: "cert-key-id" }
+              - { mountPath: "/etc/hyperledger/fabric-ca-server", name: "{{ cnodename }}-data" }
+              command: ["fabric-ca-server"]
+              args:  ["start", "-b", "admin:adminpw", "-d"]
