@@ -205,3 +205,27 @@
               - { mountPath: "/etc/hyperledger/fabric-ca-server", name: "{{ cnodename }}-data" }
               command: ["fabric-ca-server"]
               args:  ["start", "-b", "$(CA_USERNAME):$(CA_PASSWORD)", "-d"]
+
+# - name: Wait till the CA is running
+#   community.kubernetes.k8s_info:
+#     kind: CA
+#     api_version: operator.fabric.hyperledger.org/v1alpha1
+#     wait: yes
+#     name: "{{ ansible_operator_meta.name }}"
+#     namespace: "{{ ansible_operator_meta.namespace }}"
+#     wait_condition:
+#       type: Running
+#       reason: Successful
+#     wait_sleep: 5
+#     wait_timeout: 360
+#   register: web_service
+
+# Update the crd to have endpoints and other possible information 
+- name: update the crd status
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: CA
+    name: "{{ ansible_operator_meta.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+    status:
+      endpoint: 'just something here for fun'
