@@ -38,7 +38,7 @@
         type: kubernetes.io/basic-auth
         stringData:
           username: admin
-          password: "{{ lookup('community.general.random_string', length=12) }}"
+          password: "{{ lookup('community.general.random_string', length=12, special=false) }}"
 
 - name: Retrieve the CA certificate
   community.kubernetes.k8s_info:
