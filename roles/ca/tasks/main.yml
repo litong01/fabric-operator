@@ -220,6 +220,99 @@
 #     wait_timeout: 360
 #   register: web_service
 
+# Here we figure out how to expose the node endpoint
+
+# Update istio system to allow a new port to be open
+# We need to figure out how to get a port 
+# 1. via configuration parameter
+# 2. Automatically find one which is available cluster wide
+- name: Setup an external port for the node
+  set_fact:
+    ext_port: 31066
+    istio_namespace: 'istio-system'
+    istio_ingressgateway: 'istio-ingressgateway'
+
+# Now to update istio service
+- name: Adding the port to istio service
+  community.kubernetes.k8s:
+    definition:
+      api_version: v1
+      kind: Service
+      metadata:
+        name: '{{ istio_ingressgateway }}'
+        namespace: '{{ istio_namespace }}'
+      merge_type: merge
+      spec:
+        ports:
+        - name: "tcp{{ ext_port }}"
+          port: "{{ ext_port }}"
+          protocol: TCP
+          targetPort: "{{ ext_port }}"
+
+# Now to update istio deployment
+- name: Adding the port to istio deployment
+  community.kubernetes.k8s:
+    definition:
+      api_version: apps/v1
+      kind: Deployment
+      metadata:
+        name: '{{ istio_ingressgateway }}'
+        namespace: '{{ istio_namespace }}'
+      merge_type: strategic-merge
+      spec:
+        template:
+          spec:
+            containers:
+            - name: istio-proxy
+              ports:
+              - containerPort: "{{ ext_port }}"
+                protocol: TCP
+
+# Now we will need to create gateway for the node
+- name: Create the gateway for the node
+  community.kubernetes.k8s:
+    definition:
+      state: present
+      api_version: v1beta1
+      kind: Gateway
+      metadata:
+        name: '{{ ansible_operator_meta.name }}-gateway'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          istio: ingressgateway
+        servers:
+        - port:
+            number: '{{ ext_port }}'
+            name: 'tcp{{ ext_port }}'
+            protocol: TCP
+          hosts:
+          - '{{ domain }}'
+
+# Now we will create virtual service to route the traffic to the node
+- name: Create the virtual service for the node
+  community.kubernetes.k8s:
+    definition:
+      state: present
+      api_version: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: '{{ ansible_operator_meta.name }}-virtualservice'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        hosts:
+        - '{{ domain }}'
+        gateways:
+        - '{{ ansible_operator_meta.name }}-gateway'
+        tcp:
+        - match:
+          - port: '{{ ext_port }}'
+          route:
+          - destination:
+              host: '{{ ansible_operator_meta.name }}'
+              port:
+                number: 7054
+
 # Update the crd to have endpoints and other possible information 
 - name: update the crd status
   operator_sdk.util.k8s_status:
@@ -228,4 +321,4 @@
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
-      endpoint: 'just something here for fun'
+      endpoint: '{{ domain }}:{{ ext_port}}'

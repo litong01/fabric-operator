@@ -43,6 +43,22 @@ rules:
       - update
       - watch
   ##
+  ## Rules for istio resources.
+  ##
+  - apiGroups:
+      - networking.istio.io
+    resources:
+      - gateways
+      - virtualservices
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  ##
   ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Orderer
   ##
   - apiGroups:
