@@ -4,6 +4,6 @@ metadata:
   name: ca-sample
 spec:
   # Add fields here
-  domain: 915f8ff1-us-south.lb.appdomain.cloud
+  domain:
   certs:
   admin:

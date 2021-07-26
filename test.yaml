@@ -1,0 +1,15 @@
+- name: Start fabric operations
+  hosts: localhost
+  gather_facts: no
+  connection: local
+  tasks:
+    - name: Check if this is k8s
+      set_fact:
+        used_ports: "{{ [4, 5, 6, 8, 10] }}"
+        ext_port: 4
+
+    - name: find an available port
+      set_fact:
+        ext_port: "{{ item }}"
+      when: ext_port in used_ports
+      loop: "{{ range(4, 500, 1) | list }}"

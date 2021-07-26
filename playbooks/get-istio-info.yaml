@@ -1,0 +1,59 @@
+# Tasks to create a new gateway and virtual service for the node
+# Here is the logic to find an available port for a service
+# 1. Find all the istio ingress gateway deployment and services
+# 2. Use the first found deployment and service. This logic need
+#    some improvement to make sure correct deployment and service
+#    is updated
+# 3. Find all the ports from the service
+# 4. For new node, find a port which is not in the port list
+
+- name: Search for all istio ingress gateways
+  community.kubernetes.k8s_info:
+    kind: "{{ item }}"
+    label_selectors:
+      - app = istio-ingressgateway
+      - istio = ingressgateway
+      - release = istio
+      - operator.istio.io/component = IngressGateways
+  with_items:
+  - Deployment
+  - Service
+  register: istio_info
+
+- name: Get istio info when there are deployments and services
+  when: istio_info.results|length == 2
+  block:
+  - name: Set up variables
+    set_fact:
+      istio_namespace: "{{ istio_info.results[0].resources[0].metadata.namespace | default('') }}"
+      istio_deplyment_name: "{{ istio_info.results[0].resources[0].metadata.name | default('') }}"
+      istio_service_name: "{{ istio_info.results[1].resources[0].metadata.name | default('') }}"
+      istio_hostname: "{{ istio_info.results[1].resources[0].status.loadBalancer.ingress[0].hostname | default('') }}"
+      istio_ports: "{{ istio_info.results[1].resources[0].spec.ports | default([]) }}"
+
+  - name: Get all the used ports
+    set_fact:
+      used_ports: "{{ istio_ports | map(attribute='port') | list }}"
+      all_ports: "{{ lookup('sequence', 'start=31001 end=32767', wantlist=True) }}"
+
+  - name: Find first available port
+    set_fact:
+      ext_port: "{{ (all_ports | difference(used_ports))[0] | int }}"
+
+- name: Get istio deployment
+  when: istio_info.results|length != 2
+  set_fact:
+    istio_namespace: ''
+    istio_deplyment_name: ''
+    istio_service_name: ''
+    istio_hostname: ''
+    ext_port: 0
+
+- name: Show the findings
+  debug:
+    msg: "The hostname and port: {{ istio_hostname }}:{{ ext_port }}"
+
+- name: Reset the domain if it was not set
+  set_fact:
+    domain: "{{ istio_hostname }}"
+  when: domain == None

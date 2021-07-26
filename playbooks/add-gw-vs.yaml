@@ -1,7 +1,15 @@
 # Tasks to create a new gateway and virtual service for the node
+- name: Check the existance of the gateway
+  community.kubernetes.k8s_info:
+    name: '{{ ansible_operator_meta.name }}-gateway'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    api_version: 'networking.istio.io/v1beta1'
+    kind: Gateway
+  register: thegateway
 
-# Now we will need to create gateway for the node
+# Now we will need to create gateway for the node when there is none
 - name: Create the gateway for the node
+  when: (thegateway.resources|length) == 0 and ext_port > 0
   community.kubernetes.k8s:
     name: '{{ ansible_operator_meta.name }}-gateway'
     namespace: '{{ ansible_operator_meta.namespace }}'
@@ -20,9 +28,17 @@
           hosts:
           - '{{ domain }}'
 
+- name: Check the existance of the virtual service
+  community.kubernetes.k8s_info:
+    name: '{{ ansible_operator_meta.name }}-virtualservice'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    api_version: 'networking.istio.io/v1beta1'
+    kind: VirtualService
+  register: thevs
 
 # Now we will create virtual service to route the traffic to the node
 - name: Create the virtual service for the node
+  when: (thevs.resources|length) == 0 and ext_port > 0
   community.kubernetes.k8s:
     name: '{{ ansible_operator_meta.name }}-virtualservice'
     namespace: '{{ ansible_operator_meta.namespace }}'
