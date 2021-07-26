@@ -1,0 +1,26 @@
+
+- name: Setup an external port for the node
+  set_fact:
+    ext_port: 31066
+    istio_namespace: 'istio-system'
+    istio_ingressgateway: 'istio-ingressgateway'
+
+
+- name: Create the gateway for the node
+  community.kubernetes.k8s:
+    name: '{{ ansible_operator_meta.name }}-gateway'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    api_version: "networking.istio.io/v1beta1"
+    kind: Gateway
+    apply: yes
+    definition:
+      spec:
+        selector:
+          istio: ingressgateway
+        servers:
+        - port:
+            number: '{{ ext_port }}'
+            name: 'tcp{{ ext_port }}'
+            protocol: TCP
+          hosts:
+          - '{{ domain }}'

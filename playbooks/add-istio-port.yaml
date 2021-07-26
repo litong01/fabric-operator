@@ -1,0 +1,48 @@
+# This file include tasks to add a new port to istio
+
+
+# Update istio system to allow a new port to be open
+# We need to figure out how to get a port 
+# 1. via configuration parameter
+# 2. Automatically find one which is available cluster wide
+- name: Setup an external port for the node
+  set_fact:
+    ext_port: 31066
+    istio_namespace: 'istio-system'
+    istio_ingressgateway: 'istio-ingressgateway'
+
+# update istio service to support new tcp port
+- name: Adding the port to istio service
+  community.kubernetes.k8s:
+    definition:
+      api_version: v1
+      kind: Service
+      metadata:
+        name: '{{ istio_ingressgateway }}'
+        namespace: '{{ istio_namespace }}'
+      merge_type: merge
+      spec:
+        ports:
+        - name: "tcp{{ ext_port }}"
+          port: "{{ ext_port }}"
+          protocol: TCP
+          targetPort: "{{ ext_port }}"
+
+# Update istio deployment with the new port
+- name: Adding the port to istio deployment
+  community.kubernetes.k8s:
+    definition:
+      api_version: apps/v1
+      kind: Deployment
+      metadata:
+        name: '{{ istio_ingressgateway }}'
+        namespace: '{{ istio_namespace }}'
+      merge_type: strategic-merge
+      spec:
+        template:
+          spec:
+            containers:
+            - name: istio-proxy
+              ports:
+              - containerPort: "{{ ext_port }}"
+                protocol: TCP
