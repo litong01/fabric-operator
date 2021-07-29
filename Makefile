@@ -63,6 +63,7 @@ run: ansible-operator ## Run against the configured Kubernetes cluster in ~/.kub
 
 docker-build: ## Build docker image with the manager.
 	docker build -t ${IMG} .
+	docker rmi -f $(shell docker images -f 'dangling=true' -q) > /dev/null 2>&1 || true
 
 docker-push: ## Push docker image with the manager.
 	docker push ${IMG}

@@ -9,24 +9,26 @@
 
 # Now we will need to create gateway for the node when there is none
 - name: Create the gateway for the node
-  when: (thegateway.resources|length) == 0 and ext_port > 0
-  community.kubernetes.k8s:
-    name: '{{ ansible_operator_meta.name }}-gateway'
-    namespace: '{{ ansible_operator_meta.namespace }}'
-    api_version: 'networking.istio.io/v1beta1'
-    kind: Gateway
-    apply: yes
-    definition:
-      spec:
-        selector:
-          istio: ingressgateway
-        servers:
-        - port:
-            number: '{{ ext_port }}'
-            name: 'tcp{{ ext_port }}'
-            protocol: TCP
-          hosts:
-          - '{{ domain }}'
+  when: (thegateway.resources|length) == 0
+  block:
+  - name: Add gateway
+    community.kubernetes.k8s:
+      state: present
+      definition: "{{ lookup('template', role_path+'/../../playbooks/templates/gateway_def.j2')|from_yaml }}"
+
+  # update istio service to support new tcp port
+  - name: Update istio ingress gateway service
+    block:
+    - name: Adding the port to istio ingress service
+      community.kubernetes.k8s:
+        merge_type: strategic-merge
+        definition: "{{ lookup('template', role_path+'/../../playbooks/templates/service_def.j2')|from_yaml }}"
+
+  # Update istio deployment with the new port
+  - name: Adding the port to istio ingress deployment
+    community.kubernetes.k8s:
+      merge_type: strategic-merge
+      definition: "{{ lookup('template', role_path+'/../../playbooks/templates/deployment_def.j2')|from_yaml }}"
 
 - name: Check the existance of the virtual service
   community.kubernetes.k8s_info:
@@ -38,24 +40,7 @@
 
 # Now we will create virtual service to route the traffic to the node
 - name: Create the virtual service for the node
-  when: (thevs.resources|length) == 0 and ext_port > 0
+  when: (thevs.resources|length) == 0
   community.kubernetes.k8s:
-    name: '{{ ansible_operator_meta.name }}-virtualservice'
-    namespace: '{{ ansible_operator_meta.namespace }}'
-    api_version: 'networking.istio.io/v1beta1'
-    kind: VirtualService
-    apply: yes
-    definition:
-      spec:
-        hosts:
-        - '{{ domain }}'
-        gateways:
-        - '{{ ansible_operator_meta.name }}-gateway'
-        tcp:
-        - match:
-          - port: '{{ ext_port }}'
-          route:
-          - destination:
-              host: '{{ ansible_operator_meta.name }}'
-              port:
-                number: 7054
+    merge_type: strategic-merge
+    definition: "{{ lookup('template', role_path+'/../../playbooks/templates/vs_def.j2')|from_yaml }}"

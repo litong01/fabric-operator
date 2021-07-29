@@ -21,7 +21,7 @@
   register: istio_info
 
 - name: Get istio info when there are deployments and services
-  when: istio_info.results|length == 2
+  when: istio_info.results[0].resources|length > 0 and istio_info.results[1].resources|length > 0
   block:
   - name: Set up variables
     set_fact:
@@ -33,27 +33,20 @@
 
   - name: Get all the used ports
     set_fact:
-      used_ports: "{{ istio_ports | map(attribute='port') | list }}"
+      used_ports: "{{ istio_ports | map(attribute='port') | list | map('string') | list }}"
       all_ports: "{{ lookup('sequence', 'start=31001 end=32767', wantlist=True) }}"
 
   - name: Find first available port
     set_fact:
       ext_port: "{{ (all_ports | difference(used_ports))[0] | int }}"
 
+  - name: Show the findings
+    debug:
+      msg: "The hostname and port: {{ istio_hostname }}:{{ ext_port }}"
+
+# this is the situation that there is no istio ingress gateway or deployment
+# available, thus, the endpoint can not be exposed to outside of the cluster
 - name: Get istio deployment
-  when: istio_info.results|length != 2
-  set_fact:
-    istio_namespace: ''
-    istio_deplyment_name: ''
-    istio_service_name: ''
-    istio_hostname: ''
-    ext_port: 0
-
-- name: Show the findings
-  debug:
-    msg: "The hostname and port: {{ istio_hostname }}:{{ ext_port }}"
-
-- name: Reset the domain if it was not set
-  set_fact:
-    domain: "{{ istio_hostname }}"
-  when: domain == None
+  when: istio_info.results[0].resources|length == 0 or istio_info.results[1].resources|length == 0
+  fail:
+    msg: "Istio system was not setup correctly, please make sure that the istio ingress service and depolyment are running"

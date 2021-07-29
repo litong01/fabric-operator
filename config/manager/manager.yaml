@@ -29,10 +29,17 @@ spec:
         - --leader-elect
         - --leader-election-id=fabric-operator
         image: controller:latest
+        imagePullPolicy: "Always"
         name: manager
         env:
         - name: ANSIBLE_GATHERING
           value: explicit
+        - name: ANSIBLE_VERBOSITY_CA_OPERATOR_FABRIC_HYPERLEDGER_ORG
+          value: "0"
+        - name: ANSIBLE_VERBOSITY_ORDERER_OPERATOR_FABRIC_HYPERLEDGER_ORG
+          value: "0"
+        - name: ANSIBLE_VERBOSITY_PEER_OPERATOR_FABRIC_HYPERLEDGER_ORG
+          value: "0"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

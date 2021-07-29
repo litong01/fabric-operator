@@ -3,6 +3,8 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: cas.operator.fabric.hyperledger.org
+  annotations:
+    "ansible.sdk.operatorframework.io/verbosity": "1"
 spec:
   group: operator.fabric.hyperledger.org
   names:

@@ -1,0 +1,15 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: '{{ ansible_operator_meta.name }}-gateway'
+  namespace: '{{ ansible_operator_meta.namespace }}'
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: {{ ext_port }}
+      name: tcp{{ ext_port }}
+      protocol: TCP
+    hosts:
+    - '{{ istio_hostname }}'

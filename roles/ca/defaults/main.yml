@@ -1,17 +1,18 @@
 ---
 # default configuration for CA node
 
-# domain of the CA node. if missing, the local name will be used.
-domain:
+# organization name of the CA node. Should be a dns like string
+# this is a required attribute, if it is empty, the error will occur
+organization:
 
 # Certificate for the CA node will be saved as k8s secret. The name
 # of the secret is configurable, this is to allow users to use
 # their own certificate. If the secret name is left empty, then
 # this operator will automatically generate self signed certificates
-# based on the given domain name and name of the ca node. The name
+# based on the given organization name and name of the ca node. The name
 # of the secret will be the concatnation of the ca node name
-# domain name and ca certs. For example, if the ca node name is ca1
-# domain name is example.com, then the ca secret name will be
+# organization name and ca certs. For example, if the ca node name is ca1
+# organization name is example.com, then the ca secret name will be
 # ca1-example-com-certs. The generated cert, private key and tls
 # cert, key will be saved in the secret in the following format
 # 
@@ -27,9 +28,9 @@ certs:
 # the operator will generate one using admin as username and a random
 # string as password. Then saved the id and password in a k8s basic
 # authentication secret named using the combination of the CA name,
-# domain name + admin, character dot in either node name or
-# domain name will be replaced by character dash. For example,
-# if the ca node name is ca1, domain name is example.com, then the
+# organization name + admin, character dot in either node name or
+# organization name will be replaced by character dash. For example,
+# if the ca node name is ca1, organization name is example.com, then the
 # this secret name will be ca1-example-com-admin. The secret must
 # follow this format:
 #   username: <admin by default>

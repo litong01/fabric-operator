@@ -1,0 +1,18 @@
+apiVersion: 'networking.istio.io/v1beta1'
+kind: VirtualService
+metadata:
+  name: '{{ ansible_operator_meta.name }}-virtualservice'
+  namespace: '{{ ansible_operator_meta.namespace }}'
+spec:
+  hosts:
+  - '{{ istio_hostname }}'
+  gateways:
+  - '{{ ansible_operator_meta.name }}-gateway'
+  tcp:
+  - match:
+    - port: {{ ext_port }}
+    route:
+    - destination:
+        host: '{{ ansible_operator_meta.name }}'
+        port:
+          number: 7054

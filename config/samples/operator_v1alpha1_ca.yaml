@@ -4,6 +4,6 @@ metadata:
   name: ca-sample
 spec:
   # Add fields here
-  domain:
-  certs:
-  admin:
+  organization: example.com
+  certs: ca-sample-example-com-certs
+  admin: ca-sample-example-com-admin
