@@ -40,10 +40,6 @@
     set_fact:
       ext_port: "{{ (all_ports | difference(used_ports))[0] | int }}"
 
-  - name: Show the findings
-    debug:
-      msg: "The hostname and port: {{ istio_hostname }}:{{ ext_port }}"
-
 # this is the situation that there is no istio ingress gateway or deployment
 # available, thus, the endpoint can not be exposed to outside of the cluster
 - name: Get istio deployment

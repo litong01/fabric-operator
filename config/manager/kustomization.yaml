@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: email4tong/fabricop
-  newTag: 1.3.1
+  newTag: v1.0.0

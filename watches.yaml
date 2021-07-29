@@ -8,6 +8,9 @@
   group: operator.fabric.hyperledger.org
   kind: CA
   role: ca
+  finalizer:
+    name: operator.fabric.hyperledger.org/finalizer
+    playbook: playbooks/destroy.yml
 - version: v1alpha1
   group: operator.fabric.hyperledger.org
   kind: Peer
