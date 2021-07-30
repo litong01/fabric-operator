@@ -181,7 +181,7 @@
             - ReadWriteOnce
             resources:
               requests:
-                storage: 2Gi
+                storage: "{{ storage }}"
         template:
           metadata:
             labels:
@@ -196,11 +196,13 @@
                 secretName: '{{ cacertsecretname }}'
             containers:
             - name: fabric-ca
-              image: hyperledger/fabric-ca:1.5
+              image: 'hyperledger/fabric-ca:{{ release }}'
               imagePullPolicy: IfNotPresent
               env:
+              - { name: "FABRIC_CA_SERVER_LOGLEVEL", value: "{{ log_level }}" }
+              - { name: "FABRIC_CA_SERVER_DEBUG", value: "false" }
               - { name: "FABRIC_CA_HOME", value: "/etc/hyperledger/fabric-ca-server" }
-              - { name: "FABRIC_CA_SERVER_CA_NAME", value: "{{ nodename}}" }
+              - { name: "FABRIC_CA_SERVER_CA_NAME", value: "{{ nodename }}" }
               - { name: "FABRIC_CA_SERVER_CA_KEYFILE", value: "/etc/hyperledger/fabric-ca/idcerts/ca-key.pem" }
               - { name: "FABRIC_CA_SERVER_CA_CERTFILE", value: "/etc/hyperledger/fabric-ca/idcerts/ca-cert.pem" }
               - { name: "FABRIC_CA_SERVER_TLS_ENABLED", value: "true" }
@@ -220,7 +222,7 @@
               - { mountPath: "/etc/hyperledger/fabric-ca/idcerts", name: "cert-key-id" }
               - { mountPath: "/etc/hyperledger/fabric-ca-server", name: "{{ cnodename }}-data" }
               command: ["fabric-ca-server"]
-              args:  ["start", "-b", "$(CA_USERNAME):$(CA_PASSWORD)", "-d"]
+              args:  ["start", "-b", "$(CA_USERNAME):$(CA_PASSWORD)"]
 
 # - name: Wait till the CA is running
 #   community.kubernetes.k8s_info:

@@ -19,6 +19,7 @@ rules:
       - persistentvolumeclaims
       - events
       - configmaps
+      - namespaces
     verbs:
       - create
       - delete

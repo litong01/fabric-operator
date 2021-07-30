@@ -7,3 +7,6 @@ spec:
   organization: example.com
   certs: ca-sample-example-com-certs
   admin: ca-sample-example-com-admin
+  release: 1.5.0
+  storage: 5Gi
+  logLevel: DEBUG

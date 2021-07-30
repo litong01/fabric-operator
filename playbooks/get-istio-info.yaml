@@ -7,6 +7,17 @@
 # 3. Find all the ports from the service
 # 4. For new node, find a port which is not in the port list
 
+- name: Allow istio injection
+  community.kubernetes.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ ansible_operator_meta.namespace }}"
+    merge_type: strategic-merge
+    definition:
+      metadata:
+        labels:
+          istio-injection: enabled
+
 - name: Search for all istio ingress gateways
   community.kubernetes.k8s_info:
     kind: "{{ item }}"

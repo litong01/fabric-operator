@@ -36,3 +36,14 @@ certs:
 #   username: <admin by default>
 #   password: <password>
 admin:
+
+# ca node fabric release, the valid number must match available fabric ca
+# releases which is available as tag on each hyperledger/fabric-ca.
+# These tags can be found by search docker hub.
+release: 1.5.0
+
+# ca node storage size, this has to be valid kubernetes storage size
+storage: 5Gi
+
+# ca node logging level.
+logLevel: ERROR
