@@ -13,3 +13,12 @@
         ext_port: "{{ item }}"
       when: ext_port in used_ports
       loop: "{{ range(4, 500, 1) | list }}"
+      
+    - get_url:
+        url: https://github.com/hyperledger/fabric/releases/download/v2.3.2/hyperledger-fabric-linux-amd64-2.3.2.tar.gz
+        dest: /opt/ansible
+
+    - unarchive:
+        src: /opt/ansible/hyperledger-fabric-linux-amd64-2.3.2.tar.gz
+        dest: /opt/ansible/bin
+        creates: /opt/ansible/bin/bin/peer
