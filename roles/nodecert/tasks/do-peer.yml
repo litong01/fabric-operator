@@ -1,4 +1,48 @@
 ---
-- name: For test
-  debug:
-    msg: "from do-peer.yaml"
+- name: Search for the matching secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    label_selectors:
+      - 'fabric-node-type = CA'
+      - 'fabric-organization = {{ organization}}'
+  register: casecret
+
+- debug:
+    var: casecret
+
+- name: Get the ca cert and keys
+  when: casecret.resources|length > 0 and casecret.resources[0].data != None
+  block:
+  - name: Setup the ca certs and parties
+    set_fact:
+      cadata: "{{ casecret.resources[0].data }}"
+      parties: >-
+        {{ [ { 'type': 'peer', 'cn': nodename, 'id': (99999999 | random | to_uuid) },
+             { 'type': 'admin', 'cn': 'Admin@'+nodename, 'id': (99999999 | random | to_uuid) },
+        ] }}
+
+  - name: Generate cert and key pairs
+    include_tasks: "one-cert.yml"
+    loop: "{{ parties }}"
+    loop_control:
+      loop_var: party
+
+  - name: Create nodecert secret
+    community.kubernetes.k8s:
+      definition:
+        kind: Secret
+        apiVersion: v1
+        metadata:
+          name: '{{ nodecertsecretname }}'
+          namespace: '{{ ansible_operator_meta.namespace }}'
+          labels:
+            fabric-node-type: Peer
+            fabric-organization: '{{ organization }}'
+        type: Opaque
+        data:
+          tlsca.crt: "{{ cadata['tls-cert.pem'] }}"
+          server.key: "{{ lookup('file', certdir+'/'+parties[0].id+'-key.pem', errors='ignore') | b64encode }}"
+          server.crt: "{{ lookup('file', certdir+'/'+parties[0].id+'-cert.pem', errors='ignore') | b64encode }}"
+          adminca.crt: "{{ cadata['ca-cert.pem'] }}"
+          admin.key: "{{ lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore') | b64encode }}"
+          admin.crt: "{{ lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore') | b64encode }}"

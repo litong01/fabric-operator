@@ -1,9 +1,0 @@
-apiVersion: operator.fabric.hyperledger.org/v1alpha1
-kind: Nodecert
-metadata:
-  name: orderer1
-spec:
-  # Add fields here
-  organization: example.com
-  nodeType: Orderer
-

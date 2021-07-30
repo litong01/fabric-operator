@@ -1,47 +1,18 @@
 ---
-- name: Generate a private keys
-  community.crypto.openssl_privatekey:
-    path: "{{ certdir }}/{{ mspid }}-{{ item }}-key.pem"
-    curve: secp256r1
-    type: ECC
-  with_items:
-  - "ca"
-  - "tls"
+# Need to create two set of the cert and keys as ca and tls
+- name: Setup control items
+  set_fact:
+    parties: >-
+      {{ [ { 'type': 'ca', 'cn': nodename, 'id': (99999999 | random | to_uuid) },
+           { 'type': 'ca', 'cn': 'tls'+nodename, 'id': (99999999 | random | to_uuid) }
+      ] }}
+    cadata: "{{ {} }}"
 
-- name: Generate CSRs
-  community.crypto.openssl_csr:
-    path: "{{ certdir }}/{{ mspid }}-{{ item }}.csr"
-    privatekey_path: "{{ certdir }}/{{ mspid }}-{{ item }}-key.pem"
-    subject:
-      O: "{{ organization }}"
-    subject_alt_name: "DNS:{{ nodename }},DNS:{{ istio_hostname }}"
-    common_name: "{{ istio_hostname }}"
-    basic_constraints_critical: yes
-    basic_constraints: 
-    - 'CA:TRUE'
-    key_usage:
-    - digitalSignature
-    - keyEncipherment
-    - keyCertSign
-    - cRLSign
-    key_usage_critical: yes
-    extended_key_usage:
-    - clientAuth
-    - serverAuth
-    extended_key_usage_critical: yes
-  with_items:
-  - "ca"
-  - "tls"
-
-- name: Generate certificates based on CSRs
-  community.crypto.x509_certificate:
-    path: "{{ certdir }}/{{ mspid }}-{{ item }}-cert.pem"
-    privatekey_path: "{{ certdir }}/{{ mspid }}-{{ item }}-key.pem"
-    csr_path: "{{ certdir }}/{{ mspid }}-{{ item }}.csr"
-    provider: selfsigned
-  with_items:
-  - "ca"
-  - "tls"
+- name: Generate cert and key pairs
+  include_tasks: "one-cert.yml"
+  loop: "{{ parties }}"
+  loop_control:
+    loop_var: party
 
 - name: Create nodecert secret
   community.kubernetes.k8s:
@@ -56,9 +27,9 @@
           fabric-organization: '{{ organization }}'
       type: Opaque
       data:
-        ca-cert.pem: "{{ lookup('file', certdir+'/'+mspid+'-ca-cert.pem', errors='ignore') | b64encode }}"
-        ca-key.pem: "{{ lookup('file', certdir+'/'+mspid+'-ca-key.pem', errors='ignore') | b64encode }}"
-        tls-cert.pem: "{{ lookup('file', certdir+'/'+mspid+'-tls-cert.pem', errors='ignore') | b64encode }}"
-        tls-key.pem: "{{ lookup('file', certdir+'/'+mspid+'-tls-key.pem', errors='ignore') | b64encode }}"
+        ca-cert.pem: "{{ lookup('file', certdir+'/'+parties[0].id+'-cert.pem', errors='ignore') | b64encode }}"
+        ca-key.pem: "{{ lookup('file', certdir+'/'+parties[0].id+'-key.pem', errors='ignore') | b64encode }}"
+        tls-cert.pem: "{{ lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore') | b64encode }}"
+        tls-key.pem: "{{ lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore') | b64encode }}"
         adminid: "{{ lookup('community.general.random_string', length=8, special=false) | b64encode }}"
         adminpw: "{{ lookup('community.general.random_string', length=12, special=false) | b64encode }}"

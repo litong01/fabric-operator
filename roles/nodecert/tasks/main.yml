@@ -32,6 +32,11 @@
   - name: Create secret
     include_tasks: "do-{{ node_type|lower }}.yml"
 
+  - name: Now cleanup the working directory
+    file:
+      path: "{{ certdir }}"
+      state: "absent"
+
   - name: Update the crd status
     operator_sdk.util.k8s_status:
       api_version: operator.fabric.hyperledger.org/v1alpha1
