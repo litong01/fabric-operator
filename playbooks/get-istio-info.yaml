@@ -46,6 +46,7 @@
     set_fact:
       used_ports: "{{ istio_ports | map(attribute='port') | list | map('string') | list }}"
       all_ports: "{{ lookup('sequence', 'start=31001 end=32767', wantlist=True) }}"
+    no_log: True
 
   - name: Find first available port
     set_fact:

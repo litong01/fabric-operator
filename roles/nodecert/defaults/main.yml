@@ -1,0 +1,38 @@
+---
+# defaults file for Nodecert
+
+# Each Nodecert resource will be a k8s opque secret. The name
+# of the secret will be the concatanation of resource name,
+# organization and word nodecert with dot being replaced by dash.
+# The secret should be labled with node type
+#    metadata:
+#       labels:
+#         fabric-node-type: CA
+#         fabric-organization: example.com
+# The format of the secret will be:
+# For CA node:
+# data:
+#   ca-cert.pem: 
+#   ca-key.pem: 
+#   tls-cert.pem: 
+#   tls-key.pem: 
+#   adminid:
+#   adminpw:
+
+# For both Orderer and Peer node
+# data:
+#   ca-cert.pem: <base64 encoded>
+#   tls-cert.pem: <base64 encoded>
+#   tls-key.pem: <base64 encoded>
+#   admin-cert.pem: <base64 encoded>
+#   admin-key.pem <base64 encoded>
+#
+
+# organization name of the node. Should be a dns like string
+# this is a required attribute, if it is empty, the error will occur
+organization: example.com
+
+# the type of node, can be CA, Orderer, or Peer. If it is CA type,
+# the certificate will be either self signed if none exist. If the
+# matching secret already exists, then no secret will be created.
+nodeType: CA

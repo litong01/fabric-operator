@@ -1,0 +1,11 @@
+---
+- name: Search for the matching secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    label_selectors:
+      - 'fabric-node-type = CA'
+      - 'fabric-organization = {{ organization}}'
+  register: casecret
+
+- debug:
+    var: casecret

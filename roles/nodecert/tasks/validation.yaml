@@ -1,0 +1,17 @@
+- name: Check if the organization variable is set
+  fail:
+    msg: "organization must be provided in the request"
+  when: organization == None or (organization|trim) == ''
+
+- name: Check if the node type is set and valid
+  fail:
+    msg: "node type must be provided and be one of CA, Orderer or Peer in the request"
+  when: node_type == None or (node_type|trim) == '' or ((node_type|lower) not in ('ca', 'orderer', 'peer'))
+
+- name: Set mspid
+  set_fact:
+    mspid: "{{ ansible_operator_meta.name }}-{{ organization|replace('.', '-') }}"
+
+- name: Get the home directory and setup node name
+  set_fact:
+    workdir: "{{ lookup('env','HOME') }}/vars"

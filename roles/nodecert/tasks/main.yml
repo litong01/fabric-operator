@@ -1,0 +1,42 @@
+---
+# tasks file for Nodecert
+- name: Validate configurations
+  include_tasks: "validation.yaml"
+
+- name: Search for the matching secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ mspid }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: nodecert_secret
+
+- name: Create the secret if none exists
+  when: (nodecert_secret.resources | length) == 0
+  block:
+  - name: Setup node name and secret name
+    set_fact:
+      nodename: "{{ ansible_operator_meta.name }}.{{ organization }}"
+      nodecertsecretname: "{{ mspid }}-nodecert"
+      certdir: "{{ workdir }}/{{ mspid}}-nodecert"
+
+  - name: Get istio info
+    include_tasks: "{{ role_path }}/../../playbooks/get-istio-info.yaml"
+
+  - name: Make sure that working directory exists
+    file:
+      path: "{{ certdir }}"
+      state: "directory"
+      mode: 0775
+
+  - name: Create secret
+    include_tasks: "do-{{ node_type|lower }}.yml"
+
+  - name: Update the crd status
+    operator_sdk.util.k8s_status:
+      api_version: operator.fabric.hyperledger.org/v1alpha1
+      kind: Nodecert
+      name: "{{ ansible_operator_meta.name }}"
+      namespace: "{{ ansible_operator_meta.namespace }}"
+      status:
+        certsecretname: '{{ nodecertsecretname }}'

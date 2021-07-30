@@ -15,4 +15,8 @@
   group: operator.fabric.hyperledger.org
   kind: Peer
   role: peer
+- version: v1alpha1
+  group: operator.fabric.hyperledger.org
+  kind: Nodecert
+  role: nodecert
 #+kubebuilder:scaffold:watch

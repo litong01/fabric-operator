@@ -110,4 +110,21 @@ rules:
       - patch
       - update
       - watch
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Nodecert
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - nodecerts
+      - nodecerts/status
+      - nodecerts/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
 #+kubebuilder:scaffold:rules

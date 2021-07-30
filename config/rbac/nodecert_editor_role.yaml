@@ -1,0 +1,24 @@
+# permissions for end users to edit nodecerts.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nodecert-editor-role
+rules:
+- apiGroups:
+  - operator.fabric.hyperledger.org
+  resources:
+  - nodecerts
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - operator.fabric.hyperledger.org
+  resources:
+  - nodecerts/status
+  verbs:
+  - get

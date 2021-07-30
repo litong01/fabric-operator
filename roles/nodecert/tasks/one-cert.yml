@@ -1,0 +1,63 @@
+---
+# expect to have the following parameters
+# partyid
+# party_role can be admin, p
+#  
+# party_type, indicate the cert is for what node
+#   party_type: admin, user, ca, peer or orderer
+# party_cn, indicates the common name of the party, this could be
+# peer node name, orderer node name, a user name, for example:
+#   party_cn: 'admin'
+#   party_cn: 'john'
+# this module also uses nodename and istio_hostname for the subject
+# alternative name
+
+- name: Set party file name prefix
+  set_fact:
+    partyid: "{{ 99999999 | random | to_uuid }}"
+
+- name: Generate a private keys
+  community.crypto.openssl_privatekey:
+    path: "{{ certdir }}/{{ partyid }}-key.pem"
+    curve: secp256r1
+    type: ECC
+
+- name: Generate CSRs
+  community.crypto.openssl_csr:
+    path: "{{ certdir }}/{{ partyid }}.csr"
+    privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
+    subject:
+      OU: "{{ party_type | capitalize }}"
+      O: "{{ organization }}"
+    subject_alt_name: "DNS:{{ nodename }},DNS:{{ istio_hostname }}"
+    common_name: "{{ party_cn }}"
+    basic_constraints_critical: yes
+    basic_constraints: 
+    - "CA:{{ party_type == 'ca' | ternary('TRUE', 'FALSE') }}"
+    key_usage:
+    - digitalSignature
+    - keyEncipherment
+    - keyCertSign
+    - cRLSign
+    key_usage_critical: yes
+    extended_key_usage:
+    - clientAuth
+    - serverAuth
+    extended_key_usage_critical: yes
+
+- name: Generate self-signed certificate based on CSRs
+  when: party_type == 'ca'
+  community.crypto.x509_certificate:
+    path: "{{ certdir }}/{{ partyid }}-cert.pem"
+    privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
+    csr_path: "{{ certdir }}/{{ partyid }}.csr"
+    provider: selfsigned
+
+- name: Generate signed certificate based on CSRs
+  when: party_type in ('peer', 'orderer', 'user', 'admin')
+  community.crypto.x509_certificate:
+    path: "{{ certdir }}/{{ partyid }}-cert.pem"
+    csr_path: "{{ certdir }}/{{ partyid }}.csr"
+    ownca_content: "{{ cadata['ca-cert.pem'] | b64decode }}"
+    ownca_privatekey_content: "{{ cadata['ca-key.pem'] | b64decode }}"
+    provider: ownca

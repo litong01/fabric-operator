@@ -27,4 +27,11 @@ resources:
   group: operator
   kind: Peer
   version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: fabric.hyperledger.org
+  group: operator
+  kind: Nodecert
+  version: v1alpha1
 version: "3"
