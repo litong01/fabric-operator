@@ -1,2 +1,185 @@
 ---
-# tasks file for Orderer
+- name: Validate configurations
+  include_tasks: "validation.yaml"
+
+# Try to get istio info
+- name: Get istio info
+  include_tasks: "{{ role_path }}/../../playbooks/get-istio-info.yaml"
+
+- name: Search for the Orderer node
+  community.kubernetes.k8s_info:
+    kind: Orderer
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    name: '{{ ansible_operator_meta.name }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: thenode
+
+- name: Check if this will be a new node or update
+  set_fact:
+    new_node: "{{ ((thenode.resources | length) == 0)| ternary('true', 'false') }}"
+
+- name: Get the home directory and setup node name
+  set_fact:
+    workdir: "{{ lookup('env','HOME') }}/vars"
+    nodename: "{{ ansible_operator_meta.name }}.{{ organization }}"
+
+- name: setup canonical name and node cert name for the node
+  set_fact:
+    cnodename: "{{ nodename | replace('.', '-') | lower }}"
+    nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
+
+- name: Retrieve the node cert
+  community.kubernetes.k8s_info:
+    kind: Nodecert
+    api_version: v1
+    name: '{{ nodecertname }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: nodecert
+
+- name: Generate node cert when there is none
+  when: nodecert.resources | length == 0
+  community.kubernetes.k8s:
+    definition:
+      kind: Nodecert
+      apiVersion: operator.fabric.hyperledger.org/v1alpha1
+      metadata:
+        name: '{{ nodecertname }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        organization: "{{ organization }}"
+        nodeType: Orderer
+
+- name: Retrieve the node cert
+  community.kubernetes.k8s_info:
+    kind: Nodecert
+    api_version: v1
+    name: "{{ nodecertname }}"
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    wait: yes
+    wait_condition:
+      type: Running
+      status: "True"
+    wait_sleep: 3
+    wait_timeout: 120
+
+- name: start orderer node service
+  community.kubernetes.k8s:
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        labels:
+          k8s-app: '{{ cnodename }}'
+        name: '{{ ansible_operator_meta.name }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          k8s-app: '{{ cnodename }}'
+        ports:
+        - name: ordererport
+          port: 7050
+          targetPort: 7050
+        - name: adminport
+          port: 7080
+          targetPort: 7080
+
+- name: start orderer node
+  community.kubernetes.k8s:
+    definition:
+      kind: StatefulSet
+      apiVersion: apps/v1
+      metadata:
+        name: '{{ ansible_operator_meta.name }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          matchLabels:
+            k8s-app: '{{ cnodename }}'
+            hlf-type: orderer
+            hlf-dn: '{{ organization }}'
+            hlf-mspid: '{{ cnodename }}'
+        serviceName: '{{ ansible_operator_meta.name }}'
+        replicas: 1
+        volumeClaimTemplates:
+        - metadata:
+            name: '{{ cnodename }}-data'
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: "{{ storage }}"
+        template:
+          metadata:
+            labels:
+              k8s-app: '{{ cnodename }}'
+              hlf-type: orderer
+              hlf-dn: '{{ organization }}'
+              hlf-mspid: '{{ cnodename }}'
+          spec:
+            volumes:
+            - name: nodecert
+              secret:
+                secretName: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+            containers:
+            - name: fabric-orderer
+              image: 'hyperledger/fabric-orderer:{{ release }}'
+              imagePullPolicy: IfNotPresent
+              env:
+              - { name: "FABRIC_LOGGING_SPEC", value: "{{ log_level }}" }
+              - { name: "ORDERER_GENERAL_LISTENADDRESS", value: "0.0.0.0" }
+              - { name: "ORDERER_GENERAL_LISTENPORT", value: "7050" }
+              - { name: "ORDERER_GENERAL_LOCALMSPID", value: "{{ mspid }}" }
+              - { name: "ORDERER_GENERAL_LOCALMSPDIR", value: "/var/hyperledger/orderer/msp" }
+              - { name: "ORDERER_GENERAL_BOOTSTRAPMETHOD", value: "none" }
+              - { name: "ORDERER_GENERAL_TLS_ENABLED", value: "true" }
+              - { name: "ORDERER_GENERAL_TLS_PRIVATEKEY",
+                  value: "/var/hyperledger/orderer/idcerts/server.key" }
+              - { name: "ORDERER_GENERAL_TLS_CERTIFICATE",
+                  value: "/var/hyperledger/orderer/idcerts/server.crt" }
+              - { name: "ORDERER_GENERAL_TLS_ROOTCAS",
+                  value: "[/var/hyperledger/orderer/idcerts/tlsca.crt]" }
+              - { name: "ORDERER_GENERAL_TLS_SERVERHOSTOVERRIDE", value: "{{ nodename }}" }
+              - { name: "ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE",
+                  value: "/var/hyperledger/orderer/idcerts/server.crt" }
+              - { name: "ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY",
+                  value: "/var/hyperledger/orderer/idcerts/server.key" }
+              - { name: "ORDERER_GENERAL_CLUSTER_ROOTCAS",
+                  value: "[/var/hyperledger/orderer/idcerts/tlsca.crt]" }
+              - { name: "ORDERER_ADMIN_LISTENADDRESS", value: "0.0.0.0:7080" }
+              - { name: "ORDERER_ADMIN_TLS_ENABLED", value: "true" }
+              - { name: "ORDERER_ADMIN_TLS_CLIENTAUTHREQUIRED", value: "true" }
+              - { name: "ORDERER_ADMIN_TLS_PRIVATEKEY",
+                  value: "/var/hyperledger/orderer/idcerts/server.key" }
+              - { name: "ORDERER_ADMIN_TLS_CERTIFICATE",
+                  value: "/var/hyperledger/orderer/idcerts/server.crt" }
+              - { name: "ORDERER_ADMIN_TLS_CLIENTROOTCAS",
+                  value: "[/var/hyperledger/orderer/idcerts/tlsca.crt]" }
+              - { name: "ORDERER_CHANNELPARTICIPATION_ENABLED", value: "true" }
+              - { name: "ORDERER_GENERAL_FILELEDGER_LOCATION", value: "/var/hyperledger/production" }
+              volumeMounts:
+              - { mountPath: "/etc/hyperledger/orderer/idcerts", name: "nodecert" }
+              - { mountPath: "/etc/hyperledger/production", name: "{{ cnodename }}-data" }
+              command: ["orderer"]
+
+- name: Add gateway and virtual service
+  include_tasks: "{{ role_path }}/../../playbooks/add-gw-vs.yaml"
+
+- name: Check the existance of the gateway
+  community.kubernetes.k8s_info:
+    api_version: 'networking.istio.io/v1beta1'
+    kind: Gateway
+    name: '{{ ansible_operator_meta.name }}-gateway'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: thegateway
+
+# Update the crd to have endpoints and other possible information
+- name: update the crd status
+  when: thegateway.resources | length == 1
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: Orderer
+    name: "{{ ansible_operator_meta.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+    status:
+      endpoint: '{{ istio_hostname }}:{{ thegateway.resources[0].spec.servers[0].port.number }}'

@@ -18,125 +18,52 @@
   set_fact:
     new_node: "{{ ((ca_operator.resources | length) == 0)| ternary('true', 'false') }}"
 
-- name: Get the home directory and setup node name
+- name: Setup node name
   set_fact:
-    workdir: "{{ lookup('env','HOME') }}/vars"
     nodename: "{{ ansible_operator_meta.name }}.{{ organization }}"
 
-- name: Create canonical name for the node
+- name: Setup canonical name and node cert name for the node
   set_fact:
     cnodename: "{{ nodename | replace('.', '-') | lower }}"
+    nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
 
-- name: Create canonical name for the certs and admin secret
+- name: Setup matching node cert secret name
   set_fact:
-    adminsecretname: "{{ ((admin == None or (admin|trim) == '')) | ternary(cnodename+'-admin', admin) }}"
-    cacertsecretname: "{{ ((certs == None or (certs|trim) == '')) | ternary(cnodename+'-certs', certs) }}"
+    nodecertsecretname:
 
-- name: Retrieve the CA admin secret
+- name: Retrieve the CA node cert secret
   community.kubernetes.k8s_info:
-    kind: Secret
-    api_version: v1
-    name: '{{ adminsecretname }}'
+    kind: Nodecert
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    name: '{{ nodecertname }}'
     namespace: '{{ ansible_operator_meta.namespace }}'
-  register: ca_admin
+  register: nodecert
 
-- name: Generate admin username and pw when there is none
-  when: ca_admin.resources | length == 0
-  block:
-  - debug:
-      msg: "Admin secret do not exist, now create basic auth secret"
+- name: Generate CA node cert when there is none
+  when: (nodecert.resources|length) == 0
+  community.kubernetes.k8s:
+    definition:
+      kind: Nodecert
+      apiVersion: operator.fabric.hyperledger.org/v1alpha1
+      metadata:
+        name: '{{ nodecertname }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        organization: "{{ organization }}"
+        nodeType: CA
 
-  - name: Create admin secret
-    community.kubernetes.k8s:
-      definition:
-        kind: Secret
-        apiVersion: v1
-        metadata:
-          name: '{{ adminsecretname }}'
-          namespace: '{{ ansible_operator_meta.namespace }}'
-        type: kubernetes.io/basic-auth
-        stringData:
-          username: admin
-          password: "{{ lookup('community.general.random_string', length=12, special=false) }}"
-
-- name: Retrieve the CA certificate
+- name: Retrieve the CA node cert secret
   community.kubernetes.k8s_info:
-    kind: Secret
-    api_version: v1
-    name: '{{ cacertsecretname }}'
+    kind: Nodecert
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    name: "{{ nodecertname }}"
     namespace: '{{ ansible_operator_meta.namespace }}'
-  register: ca_certs
-
-- name: Generate certificates when there is none
-  when: ca_certs.resources | length == 0
-  block:
-  - debug:
-      msg: "Certs do not exist, now create them"
-
-  - name: Make sure that working directory exists
-    file:
-      path: "{{ workdir }}/keys"
-      state: "directory"
-      mode: 0775
-  
-  - name: Generate a private keys
-    community.crypto.openssl_privatekey:
-      path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
-      curve: secp256r1
-      type: ECC
-    with_items:
-    - "ca"
-    - "tls"
-  
-  - name: Generate an Certificate Signing Request
-    community.crypto.openssl_csr:
-      path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}.csr"
-      privatekey_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
-      subject:
-        O: "{{ organization }}"
-      subject_alt_name: "DNS:{{ nodename }},DNS:{{ istio_hostname }}"
-      common_name: "{{ istio_hostname }}"
-      basic_constraints_critical: yes
-      basic_constraints: 
-      - 'CA:TRUE'
-      key_usage:
-      - digitalSignature
-      - keyEncipherment
-      - keyCertSign
-      - cRLSign
-      key_usage_critical: yes
-      extended_key_usage:
-      - clientAuth
-      - serverAuth
-      extended_key_usage_critical: yes
-    with_items:
-    - "ca"
-    - "tls"
-  
-  - name: Generate a certificate based on CSR
-    community.crypto.x509_certificate:
-      path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-cert.pem"
-      privatekey_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}-key.pem"
-      csr_path: "{{ workdir }}/keys/{{ cnodename }}-{{ item }}.csr"
-      provider: selfsigned
-    with_items:
-    - "ca"
-    - "tls"
-  
-  - name: Create a secret
-    community.kubernetes.k8s:
-      definition:
-        kind: Secret
-        apiVersion: v1
-        metadata:
-          name: '{{ cacertsecretname }}'
-          namespace: '{{ ansible_operator_meta.namespace }}'
-        type: Opaque
-        data:
-          ca-cert.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-ca-cert.pem', errors='ignore') | b64encode }}"
-          ca-key.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-ca-key.pem', errors='ignore') | b64encode }}"
-          tls-cert.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-tls-cert.pem', errors='ignore') | b64encode }}"
-          tls-key.pem: "{{ lookup('file', workdir+'/keys/'+cnodename+'-tls-key.pem', errors='ignore') | b64encode }}"
+    wait: yes
+    wait_condition:
+      type: Running
+      status: "True"
+    wait_sleep: 3
+    wait_timeout: 120
 
 - name: start ca service
   community.kubernetes.k8s:
@@ -193,7 +120,7 @@
             volumes:
             - name: cert-key-id
               secret:
-                secretName: '{{ cacertsecretname }}'
+                secretName: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
             containers:
             - name: fabric-ca
               image: 'hyperledger/fabric-ca:{{ release }}'
@@ -211,13 +138,13 @@
               - name: CA_USERNAME
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ adminsecretname }}'
-                    key: username
+                    name: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+                    key: adminid
               - name: CA_PASSWORD
                 valueFrom:
                   secretKeyRef:
-                    name: '{{ adminsecretname }}'
-                    key: password
+                    name: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+                    key: adminpw
               volumeMounts:
               - { mountPath: "/etc/hyperledger/fabric-ca/idcerts", name: "cert-key-id" }
               - { mountPath: "/etc/hyperledger/fabric-ca-server", name: "{{ cnodename }}-data" }

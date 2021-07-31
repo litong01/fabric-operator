@@ -1,0 +1,25 @@
+# This module retrieves istio hostname from ingress gateway
+- name: Search for all istio ingress gateway services
+  community.kubernetes.k8s_info:
+    kind: Service
+    label_selectors:
+      - app = istio-ingressgateway
+      - istio = ingressgateway
+      - release = istio
+      - operator.istio.io/component = IngressGateways
+  register: istio_svc
+
+- name: Get istio info when there are deployments and services
+  when: istio_svc.resources|length > 0
+  block:
+  - name: Set up variables
+    set_fact:
+      istio_namespace: "{{ istio_svc.resources[0].metadata.namespace | default('') }}"
+      istio_service_name: "{{ istio_svc.resources[0].metadata.name | default('') }}"
+      istio_hostname: "{{ istio_svc.resources[0].status.loadBalancer.ingress[0].hostname | default('') }}"
+
+# Fail the operation when there is no istio ingress gateway
+- name: Get istio deployment
+  when: istio_svc.resources|length == 0
+  fail:
+    msg: "No ingress gateway found, please make sure that the istio ingress gateway is available."

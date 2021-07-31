@@ -4,4 +4,8 @@ metadata:
   name: orderer-sample
 spec:
   # Add fields here
-  foo: bar
+  organization: example.com
+  nodeCert:
+  release: 2.4
+  storage: 5Gi
+  logLevel: DEBUG

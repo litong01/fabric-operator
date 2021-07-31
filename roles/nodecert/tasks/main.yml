@@ -7,7 +7,7 @@
   community.kubernetes.k8s_info:
     kind: Secret
     api_version: v1
-    name: '{{ mspid }}'
+    name: '{{ mspid }}-nodecert'
     namespace: '{{ ansible_operator_meta.namespace }}'
   register: nodecert_secret
 
@@ -17,31 +17,33 @@
   - name: Setup node name and secret name
     set_fact:
       nodename: "{{ ansible_operator_meta.name }}.{{ organization }}"
-      nodecertsecretname: "{{ mspid }}-nodecert"
-      certdir: "{{ workdir }}/{{ mspid}}-nodecert"
+      nodecertsecretname: '{{ mspid }}-nodecert'
+      certdir: '{{ workdir }}/{{ mspid}}-nodecert'
 
   - name: Get istio info
-    include_tasks: "{{ role_path }}/../../playbooks/get-istio-info.yaml"
+    include_tasks: '{{ role_path }}/../../playbooks/get-istio-hostname.yaml'
 
   - name: Make sure that working directory exists
     file:
-      path: "{{ certdir }}"
-      state: "directory"
+      path: '{{ certdir }}'
+      state: 'directory'
       mode: 0775
 
   - name: Create secret
-    include_tasks: "do-{{ node_type|lower }}.yml"
+    include_tasks: 'do-{{ node_type|lower }}.yml'
 
   - name: Now cleanup the working directory
     file:
-      path: "{{ certdir }}"
-      state: "absent"
+      path: '{{ certdir }}'
+      state: 'absent'
 
-  - name: Update the crd status
-    operator_sdk.util.k8s_status:
-      api_version: operator.fabric.hyperledger.org/v1alpha1
-      kind: Nodecert
-      name: "{{ ansible_operator_meta.name }}"
-      namespace: "{{ ansible_operator_meta.namespace }}"
-      status:
-        certsecretname: '{{ nodecertsecretname }}'
+# Regardless the secret was created by this operator or manually
+# via other means, we link the secret with this nodecert resource.
+- name: Update the crd status
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: Nodecert
+    name: '{{ ansible_operator_meta.name }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    status:
+      certsecretname: '{{ mspid }}-nodecert'

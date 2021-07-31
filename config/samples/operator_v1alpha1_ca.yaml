@@ -5,8 +5,7 @@ metadata:
 spec:
   # Add fields here
   organization: example.com
-  certs: ca-sample-example-com-certs
-  admin: ca-sample-example-com-admin
+  nodeCert:
   release: 1.5.0
   storage: 5Gi
   logLevel: DEBUG

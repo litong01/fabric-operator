@@ -11,31 +11,21 @@ organization:
 # this operator will automatically generate self signed certificates
 # based on the given organization name and name of the ca node. The name
 # of the secret will be the concatnation of the ca node name
-# organization name and ca certs. For example, if the ca node name is ca1
+# organization name and word nodecert. For example, if the ca node name is ca1
 # organization name is example.com, then the ca secret name will be
-# ca1-example-com-certs. The generated cert, private key and tls
-# cert, key will be saved in the secret in the following format
+# ca1-example-com-nodecert. Basically a new Nodecert resource will be
+# created which will in turn create the secret. The generated cert,
+# private key and tls cert, key will be saved in the secret in the following format
 # 
+# For CA node:
 # data:
-#   ca-cert.pem: <base64 encoded>
-#   ca-key.pem: <base64 encoded>
-#   tls-cert.pem: <base64 encoded>
-#   tls-key.pem: <base64 encoded>
-certs:
-
-# admin id and password secret. When setup CA node, the node must
-# be configured with id and password for admin. If not specified
-# the operator will generate one using admin as username and a random
-# string as password. Then saved the id and password in a k8s basic
-# authentication secret named using the combination of the CA name,
-# organization name + admin, character dot in either node name or
-# organization name will be replaced by character dash. For example,
-# if the ca node name is ca1, organization name is example.com, then the
-# this secret name will be ca1-example-com-admin. The secret must
-# follow this format:
-#   username: <admin by default>
-#   password: <password>
-admin:
+#   ca-cert.pem: 
+#   ca-key.pem: 
+#   tls-cert.pem: 
+#   tls-key.pem: 
+#   adminid:
+#   adminpw:
+nodeCert:
 
 # ca node fabric release, the valid number must match available fabric ca
 # releases which is available as tag on each hyperledger/fabric-ca.

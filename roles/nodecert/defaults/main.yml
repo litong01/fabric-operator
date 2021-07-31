@@ -21,11 +21,12 @@
 
 # For both Orderer and Peer node
 # data:
-#   ca-cert.pem: <base64 encoded>
-#   tls-cert.pem: <base64 encoded>
-#   tls-key.pem: <base64 encoded>
-#   admin-cert.pem: <base64 encoded>
-#   admin-key.pem <base64 encoded>
+#   tlsca.crt:
+#   server.key:
+#   server.crt:
+#   adminca.crt:
+#   admin.key:
+#   admin.crt:
 #
 
 # organization name of the node. Should be a dns like string
