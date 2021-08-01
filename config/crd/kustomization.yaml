@@ -6,4 +6,5 @@ resources:
 - bases/operator.fabric.hyperledger.org_cas.yaml
 - bases/operator.fabric.hyperledger.org_peers.yaml
 - bases/operator.fabric.hyperledger.org_nodecerts.yaml
+- bases/operator.fabric.hyperledger.org_agents.yaml
 #+kubebuilder:scaffold:crdkustomizeresource

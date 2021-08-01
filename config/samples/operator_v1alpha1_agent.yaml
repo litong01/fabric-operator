@@ -1,0 +1,15 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: agent-sample
+spec:
+  organization: example.com
+  type: Admin
+  action:
+    name: ChannelCreate
+    description: Create new channel
+    params:
+    - name: channelName
+      value: tongli
+    - name: channelSize
+      value: 5

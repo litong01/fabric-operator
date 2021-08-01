@@ -42,6 +42,8 @@ spec:
           value: "0"
         - name: ANSIBLE_VERBOSITY_NODECERT_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "0"
+        - name: ANSIBLE_VERBOSITY_AGENT_OPERATOR_FABRIC_HYPERLEDGER_ORG
+          value: "0"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

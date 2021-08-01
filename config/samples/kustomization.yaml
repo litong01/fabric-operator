@@ -4,4 +4,5 @@ resources:
 - operator_v1alpha1_ca.yaml
 - operator_v1alpha1_peer.yaml
 - operator_v1alpha1_nodecert.yaml
+- operator_v1alpha1_agent.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

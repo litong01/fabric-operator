@@ -1,0 +1,11 @@
+---
+# tasks file for Agent
+- name: Just show some values
+  debug:
+    var: action
+
+- name: Validate configurations
+  include_tasks: 'validation.yml'
+
+- name: Get binary
+  include_tasks: 'get-fabric-bin.yml'

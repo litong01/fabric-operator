@@ -1,0 +1,14 @@
+- name: Check if the organization variable is set
+  fail:
+    msg: "organization must be provided in the request"
+  when: organization == None or (organization|trim) == ''
+
+- name: Check if the agent type is set and valid
+  fail:
+    msg: "agent type must be provided and be admin or user"
+  when: type == None or (type|trim) == '' or ((type|lower) not in ('admin', 'user'))
+
+- name: Set work directory
+  set_fact:
+    bindir: "{{ lookup('env','HOME') }}/agent"
+    workdir: "{{ lookup('env','HOME') }}/agent/{{ 99999999 | random | to_uuid }}"

@@ -1,0 +1,16 @@
+---
+# defaults file for Agent
+# organization name of the CA node. Should be a dns like string
+# this is a required attribute, if it is empty, the error will occur
+organization:
+
+# type of the agent, the valid values are admin, user
+type:
+
+# actions to be performed
+action:
+  name:
+  description:
+  params:
+  - name:
+    value:

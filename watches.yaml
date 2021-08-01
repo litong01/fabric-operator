@@ -25,4 +25,8 @@
   group: operator.fabric.hyperledger.org
   kind: Nodecert
   role: nodecert
+- version: v1alpha1
+  group: operator.fabric.hyperledger.org
+  kind: Agent
+  role: agent
 #+kubebuilder:scaffold:watch
