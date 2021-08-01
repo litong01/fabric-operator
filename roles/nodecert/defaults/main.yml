@@ -21,10 +21,12 @@
 
 # For both Orderer and Peer node
 # data:
-#   tlsca.crt:
+#   ca.crt:
 #   server.key:
 #   server.crt:
-#   adminca.crt:
+#   tlsca.crt:
+#   tls.key:
+#   tls.crt:
 #   admin.key:
 #   admin.crt:
 #

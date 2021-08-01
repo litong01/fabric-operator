@@ -3,8 +3,8 @@
 - name: Setup control items
   set_fact:
     parties: >-
-      {{ [ { 'type': 'ca', 'cn': nodename, 'id': (99999999 | random | to_uuid) },
-           { 'type': 'ca', 'cn': 'tls'+nodename, 'id': (99999999 | random | to_uuid) }
+      {{ [ { 'type': 'ca', 'cn': nodename, 'tls': False, 'id': (99999999 | random | to_uuid) },
+           { 'type': 'ca', 'cn': 'tls'+nodename, 'tls': True, 'id': (99999999 | random | to_uuid) }
       ] }}
     cadata: "{{ {} }}"
 

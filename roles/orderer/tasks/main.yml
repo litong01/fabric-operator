@@ -28,6 +28,10 @@
     cnodename: "{{ nodename | replace('.', '-') | lower }}"
     nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
 
+- name: Setup node cert secret name
+  set_fact:
+    nodecertsecretname: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+
 - name: Retrieve the node cert
   community.kubernetes.k8s_info:
     kind: Nodecert
@@ -119,8 +123,31 @@
           spec:
             volumes:
             - name: nodecert
-              secret:
-                secretName: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+              projected:
+                sources:
+                - secret:
+                    name: "{{ nodecertsecretname }}"
+                    items:
+                    - key: ca.crt
+                      path: "cacerts/ca.pem"
+                    - key: server.key
+                      path: "keystore/priv_sk"
+                    - key: server.crt
+                      path: "signcerts/signcert.pem"
+                    - key: config.yaml
+                      path: "config.yaml"
+            - name: nodetlscert
+              projected:
+                sources:
+                - secret:
+                    name: "{{ nodecertsecretname }}"
+                    items:
+                    - key: tlsca.crt
+                      path: "ca.crt"
+                    - key: tls.key
+                      path: "server.key"
+                    - key: tls.crt
+                      path: "server.crt"
             containers:
             - name: fabric-orderer
               image: 'hyperledger/fabric-orderer:{{ release }}'
@@ -134,33 +161,34 @@
               - { name: "ORDERER_GENERAL_BOOTSTRAPMETHOD", value: "none" }
               - { name: "ORDERER_GENERAL_TLS_ENABLED", value: "true" }
               - { name: "ORDERER_GENERAL_TLS_PRIVATEKEY",
-                  value: "/var/hyperledger/orderer/idcerts/server.key" }
+                  value: "/var/hyperledger/orderer/tls/server.key" }
               - { name: "ORDERER_GENERAL_TLS_CERTIFICATE",
-                  value: "/var/hyperledger/orderer/idcerts/server.crt" }
+                  value: "/var/hyperledger/orderer/tls/server.crt" }
               - { name: "ORDERER_GENERAL_TLS_ROOTCAS",
-                  value: "[/var/hyperledger/orderer/idcerts/tlsca.crt]" }
+                  value: "[/var/hyperledger/orderer/tls/ca.crt]" }
               - { name: "ORDERER_GENERAL_TLS_SERVERHOSTOVERRIDE", value: "{{ nodename }}" }
               - { name: "ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE",
-                  value: "/var/hyperledger/orderer/idcerts/server.crt" }
+                  value: "/var/hyperledger/orderer/tls/server.crt" }
               - { name: "ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY",
-                  value: "/var/hyperledger/orderer/idcerts/server.key" }
+                  value: "/var/hyperledger/orderer/tls/server.key" }
               - { name: "ORDERER_GENERAL_CLUSTER_ROOTCAS",
-                  value: "[/var/hyperledger/orderer/idcerts/tlsca.crt]" }
+                  value: "[/var/hyperledger/orderer/tls/ca.crt]" }
               - { name: "ORDERER_ADMIN_LISTENADDRESS", value: "0.0.0.0:7080" }
               - { name: "ORDERER_ADMIN_TLS_ENABLED", value: "true" }
               - { name: "ORDERER_ADMIN_TLS_CLIENTAUTHREQUIRED", value: "true" }
               - { name: "ORDERER_ADMIN_TLS_PRIVATEKEY",
-                  value: "/var/hyperledger/orderer/idcerts/server.key" }
+                  value: "/var/hyperledger/orderer/tls/server.key" }
               - { name: "ORDERER_ADMIN_TLS_CERTIFICATE",
-                  value: "/var/hyperledger/orderer/idcerts/server.crt" }
+                  value: "/var/hyperledger/orderer/tls/server.crt" }
               - { name: "ORDERER_ADMIN_TLS_CLIENTROOTCAS",
-                  value: "[/var/hyperledger/orderer/idcerts/tlsca.crt]" }
+                  value: "[/var/hyperledger/orderer/tls/ca.crt]" }
               - { name: "ORDERER_CHANNELPARTICIPATION_ENABLED", value: "true" }
               - { name: "ORDERER_GENERAL_FILELEDGER_LOCATION", value: "/var/hyperledger/production" }
               volumeMounts:
-              - { mountPath: "/etc/hyperledger/orderer/idcerts", name: "nodecert" }
-              - { mountPath: "/etc/hyperledger/production", name: "{{ cnodename }}-data" }
-              command: ["orderer"]
+              - { mountPath: "/var/hyperledger/orderer/msp", name: "nodecert" }
+              - { mountPath: "/var/hyperledger/orderer/tls", name: "nodetlscert" }
+              - { mountPath: "/var/hyperledger/production", name: "{{ cnodename }}-data" }
+              command: ['orderer']
 
 - name: Add gateway and virtual service
   include_tasks: "{{ role_path }}/../../playbooks/add-gw-vs.yaml"

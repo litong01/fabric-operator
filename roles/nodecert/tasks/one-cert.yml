@@ -17,6 +17,7 @@
     partyid: "{{ party.id }}"
     partytype: "{{ party.type }}"
     partycn: "{{ party.cn }}"
+    partytls: "{{ party.tls }}"
 
 - name: Generate a private keys
   community.crypto.openssl_privatekey:
@@ -56,9 +57,9 @@
     csr_path: "{{ certdir }}/{{ partyid }}.csr"
     provider: selfsigned
 
-# server cert should be signed by tls root key
+# TLS cert and key signed by root tls key
 - name: Generate signed certificate based on CSRs
-  when: partytype in ('peer', 'orderer')
+  when: partytype in ('peer', 'orderer') and partytls == True
   community.crypto.x509_certificate:
     path: "{{ certdir }}/{{ partyid }}-cert.pem"
     csr_path: "{{ certdir }}/{{ partyid }}.csr"
@@ -66,9 +67,9 @@
     ownca_privatekey_content: "{{ cadata['tls-key.pem'] | b64decode }}"
     provider: ownca
 
-# user certs should be signed by root key
+# Non TLS cert and key signed by root CA key
 - name: Generate signed certificate based on CSRs
-  when: partytype in ('user', 'admin')
+  when: partytype in ('peer', 'orderer', 'user', 'admin') and partytls == False
   community.crypto.x509_certificate:
     path: "{{ certdir }}/{{ partyid }}-cert.pem"
     csr_path: "{{ certdir }}/{{ partyid }}.csr"

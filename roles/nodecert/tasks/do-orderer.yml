@@ -1,5 +1,5 @@
 ---
-- name: Search for the matching secret
+- name: Search for the matching secret of the CA organization
   community.kubernetes.k8s_info:
     kind: Secret
     label_selectors:
@@ -7,25 +7,46 @@
       - 'fabric-organization = {{ organization}}'
   register: casecret
 
-- debug:
-    var: casecret
+- name: Fail the process when CA certs are not available
+  when: casecret.resources|length == 0 or casecret.resources[0].data == None
+  fail:
+    msg: "There is no CA certs found to create orderer node certificate, create CA node cert first"
 
-- name: Get the ca cert and keys
+- name: Create the orderer node cert secret when CA certs are available
   when: casecret.resources|length > 0 and casecret.resources[0].data != None
   block:
   - name: Setup the ca certs and parties
     set_fact:
       cadata: "{{ casecret.resources[0].data }}"
       parties: >-
-        {{ [ { 'type': 'orderer', 'cn': nodename, 'id': (99999999 | random | to_uuid) },
-             { 'type': 'admin', 'cn': 'Admin@'+nodename, 'id': (99999999 | random | to_uuid) },
+        {{ [ { 'type': 'orderer', 'cn': nodename, 'tls': False, 'id': (99999999 | random | to_uuid) },
+             { 'type': 'orderer', 'cn': 'tls'+nodename, 'tls': True, 'id': (99999999 | random | to_uuid) },
+             { 'type': 'admin', 'cn': 'Admin@'+nodename, 'tls': False, 'id': (99999999 | random | to_uuid) },
         ] }}
 
-  - name: Generate cert and key pairs
+  - name: Generate cert and key pairs for all the parties
     include_tasks: "one-cert.yml"
     loop: "{{ parties }}"
     loop_control:
       loop_var: party
+
+  - name: Setup config.yaml content
+    set_fact:
+      nodeconfig: |
+        NodeOUs:
+          Enable: true
+          ClientOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: client
+          PeerOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: peer
+          AdminOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: admin
+          OrdererOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: orderer
 
   - name: Create nodecert secret
     community.kubernetes.k8s:
@@ -40,10 +61,12 @@
             fabric-organization: '{{ organization }}'
         type: Opaque
         data:
-          tlsca.crt: "{{ cadata['tls-cert.pem'] }}"
+          ca.crt: "{{ cadata['ca-cert.pem'] }}"
           server.key: "{{ lookup('file', certdir+'/'+parties[0].id+'-key.pem', errors='ignore') | b64encode }}"
           server.crt: "{{ lookup('file', certdir+'/'+parties[0].id+'-cert.pem', errors='ignore') | b64encode }}"
-          adminca.crt: "{{ cadata['ca-cert.pem'] }}"
-          admin.key: "{{ lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore') | b64encode }}"
-          admin.crt: "{{ lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore') | b64encode }}"
-  
+          tlsca.crt: "{{ cadata['tls-cert.pem'] }}"
+          tls.key: "{{ lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore') | b64encode }}"
+          tls.crt: "{{ lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore') | b64encode }}"
+          admin.key: "{{ lookup('file', certdir+'/'+parties[2].id+'-key.pem', errors='ignore') | b64encode }}"
+          admin.crt: "{{ lookup('file', certdir+'/'+parties[2].id+'-cert.pem', errors='ignore') | b64encode }}"
+          config.yaml: "{{ nodeconfig | b64encode }}"
