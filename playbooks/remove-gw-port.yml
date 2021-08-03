@@ -1,7 +1,7 @@
 ---
 # The tasks to remove port from istio
 - name: Get istio information
-  include_tasks: "get-istio-info.yaml"
+  include_tasks: "get-istio-info.yml"
 
 - name: Get the gateway info
   community.kubernetes.k8s_info:

@@ -1,11 +1,11 @@
 ---
 # tasks file for Peer
 - name: Validate configurations
-  include_tasks: "validation.yaml"
+  include_tasks: "validation.yml"
 
 # Try to get istio info
 - name: Get istio info
-  include_tasks: "{{ role_path }}/../../playbooks/get-istio-info.yaml"
+  include_tasks: "{{ role_path }}/../../playbooks/get-istio-hostname.yml"
 
 - name: Search for the Peer node
   community.kubernetes.k8s_info:
@@ -192,6 +192,16 @@
               command: ['/var/hyperledger/production/peer']
               args: ["node", "start"]
 
+# When we reach this point, we know that Peer node is most likely up
+# running, now expose the node endpoint
+
+# The following tasks are all for exposing the node endpoint to
+# outside of the k8s cluster using istio
+# When include another playbook, only role_path can be used
+# both playbook_dir and inventory_dir will be mapped to tmp directory
+- name: Get istio information and available port
+  include_tasks: "{{ role_path }}/../../playbooks/get-istio-info.yml"
+
 - name: Add gateway and virtual service
   include_tasks: "{{ role_path }}/../../playbooks/add-gw-vs.yaml"
 
@@ -212,4 +222,5 @@
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
-      endpoint: '{{ istio_hostname }}:{{ thegateway.resources[0].spec.servers[0].port.number }}'
+      endpoint: >-
+        {{ (istio_hostname=='')|ternary(istio_ip, istio_hostname) }}:{{ thegateway.resources[0].spec.servers[0].port.number }}

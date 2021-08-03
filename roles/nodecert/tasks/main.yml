@@ -1,7 +1,7 @@
 ---
 # tasks file for Nodecert
 - name: Validate configurations
-  include_tasks: "validation.yaml"
+  include_tasks: "validation.yml"
 
 - name: Search for the matching secret
   community.kubernetes.k8s_info:
@@ -21,7 +21,7 @@
       certdir: '{{ workdir }}/{{ mspid}}-nodecert'
 
   - name: Get istio info
-    include_tasks: '{{ role_path }}/../../playbooks/get-istio-hostname.yaml'
+    include_tasks: '{{ role_path }}/../../playbooks/get-istio-hostname.yml'
 
   - name: Make sure that working directory exists
     file:

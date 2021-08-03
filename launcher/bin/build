@@ -6,4 +6,5 @@ BUILD_OUTPUT_DIR=$3
 
 ansible-playbook -e "CHAINCODE_SOURCE_DIR=$CHAINCODE_SOURCE_DIR" \
   -e "CHAINCODE_METADATA_DIR=$CHAINCODE_METADATA_DIR" \
-  -e "BUILD_OUTPUT_DIR=$BUILD_OUTPUT_DIR" build.yml
+  -e "BUILD_OUTPUT_DIR=$BUILD_OUTPUT_DIR" \
+  -e "ansible_python_interpreter=/usr/bin/python3.8" build.yml
