@@ -17,6 +17,7 @@
       istio_namespace: "{{ istio_svc.resources[0].metadata.namespace | default('') }}"
       istio_service_name: "{{ istio_svc.resources[0].metadata.name | default('') }}"
       istio_hostname: "{{ istio_svc.resources[0].status.loadBalancer.ingress[0].hostname | default('') }}"
+      istio_ip: "{{ istio_svc.resources[0].status.loadBalancer.ingress[0].ip | default('') }}"
 
 # Fail the operation when there is no istio ingress gateway
 - name: Get istio deployment

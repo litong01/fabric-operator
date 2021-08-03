@@ -29,7 +29,6 @@ spec:
         - --leader-elect
         - --leader-election-id=fabric-operator
         image: controller:latest
-        imagePullPolicy: "Always"
         name: manager
         env:
         - name: ANSIBLE_GATHERING
@@ -43,7 +42,7 @@ spec:
         - name: ANSIBLE_VERBOSITY_NODECERT_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "0"
         - name: ANSIBLE_VERBOSITY_AGENT_OPERATOR_FABRIC_HYPERLEDGER_ORG
-          value: "0"
+          value: "6"
         securityContext:
           allowPrivilegeEscalation: false
         livenessProbe:

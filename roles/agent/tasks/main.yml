@@ -4,6 +4,18 @@
   debug:
     var: action
 
+- name: Show all available variables
+  debug:
+    var: ansible_role_name
+
+- name: Show all available variables
+  debug:
+    var: role_name
+
+- name: Show all available variables
+  debug:
+    var: hostvars
+
 - name: Validate configurations
   include_tasks: 'validation.yml'
 

@@ -1,13 +1,216 @@
 ---
 # tasks file for Peer
-- name: create a secret
+- name: Validate configurations
+  include_tasks: "validation.yaml"
+
+# Try to get istio info
+- name: Get istio info
+  include_tasks: "{{ role_path }}/../../playbooks/get-istio-info.yaml"
+
+- name: Search for the Peer node
+  community.kubernetes.k8s_info:
+    kind: Peer
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    name: '{{ ansible_operator_meta.name }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: thenode
+
+- name: Check if this will be a new node or update
+  set_fact:
+    new_node: "{{ ((thenode.resources | length) == 0)| ternary('true', 'false') }}"
+
+- name: Get the home directory and setup node name
+  set_fact:
+    workdir: "{{ lookup('env','HOME') }}/vars"
+    nodename: "{{ ansible_operator_meta.name }}.{{ organization }}"
+
+- name: setup canonical name and node cert name for the node
+  set_fact:
+    cnodename: "{{ nodename | replace('.', '-') | lower }}"
+    nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
+
+- name: Setup node cert secret name
+  set_fact:
+    nodecertsecretname: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+
+- name: Retrieve the node cert
+  community.kubernetes.k8s_info:
+    kind: Nodecert
+    api_version: v1
+    name: '{{ nodecertname }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: nodecert
+
+- name: Generate node cert when there is none
+  when: nodecert.resources | length == 0
   community.kubernetes.k8s:
     definition:
-      kind: Secret
+      kind: Nodecert
+      apiVersion: operator.fabric.hyperledger.org/v1alpha1
+      metadata:
+        name: '{{ nodecertname }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        organization: "{{ organization }}"
+        nodeType: Peer
+
+- name: Retrieve the node cert
+  community.kubernetes.k8s_info:
+    kind: Nodecert
+    api_version: v1
+    name: "{{ nodecertname }}"
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    wait: yes
+    wait_condition:
+      type: Running
+      status: "True"
+    wait_sleep: 3
+    wait_timeout: 120
+
+- name: start peer node service
+  community.kubernetes.k8s:
+    definition:
+      kind: Service
       apiVersion: v1
       metadata:
-        name: '{{ ansible_operator_meta.name }}-mysecret'
+        labels:
+          k8s-app: '{{ cnodename }}'
+        name: '{{ ansible_operator_meta.name }}'
         namespace: '{{ ansible_operator_meta.namespace }}'
-      type: Opaque
-      data:
-        extra: YmFyCG==
+      spec:
+        selector:
+          k8s-app: '{{ cnodename }}'
+        ports:
+        - name: peerport
+          port: 7051
+          targetPort: 7051
+        - name: chaincodeport
+          port: 7052
+          targetPort: 7052
+
+
+- name: start peer node
+  community.kubernetes.k8s:
+    definition:
+      kind: StatefulSet
+      apiVersion: apps/v1
+      metadata:
+        name: '{{ ansible_operator_meta.name }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          matchLabels:
+            k8s-app: '{{ cnodename }}'
+            hlf-type: peer
+            hlf-dn: '{{ organization }}'
+            hlf-mspid: '{{ cnodename }}'
+        serviceName: '{{ ansible_operator_meta.name }}'
+        replicas: 1
+        volumeClaimTemplates:
+        - metadata:
+            name: '{{ cnodename }}-data'
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: "{{ storage }}"
+        template:
+          metadata:
+            labels:
+              k8s-app: '{{ cnodename }}'
+              hlf-type: peer
+              hlf-dn: '{{ organization }}'
+              hlf-mspid: '{{ cnodename }}'
+          spec:
+            volumes:
+            - name: nodecert
+              projected:
+                sources:
+                - secret:
+                    name: "{{ nodecertsecretname }}"
+                    items:
+                    - key: ca.crt
+                      path: "cacerts/ca.pem"
+                    - key: server.key
+                      path: "keystore/priv_sk"
+                    - key: server.crt
+                      path: "signcerts/signcert.pem"
+                    - key: config.yaml
+                      path: "config.yaml"
+            - name: nodetlscert
+              projected:
+                sources:
+                - secret:
+                    name: "{{ nodecertsecretname }}"
+                    items:
+                    - key: tlsca.crt
+                      path: "ca.crt"
+                    - key: tls.key
+                      path: "server.key"
+                    - key: tls.crt
+                      path: "server.crt"
+            initContainers:
+            - name: setup
+              image: 'email4tong/fabricop:v1.0.0'
+              imagePullPolicy: Always
+              command:
+              - sh
+              - "-c"
+              - |
+                cd ~/downloader
+                ansible-playbook -e "RELEASE={{ release }}" -e "ansible_python_interpreter={{ ansible_playbook_python }}" downloader.yml
+                chmod +x /var/hyperledger/production/peer
+                rm -rf /var/hyperledger/production/bin /var/hyperledger/production/config
+              volumeMounts:
+              - { mountPath: "/var/hyperledger/production", name: "{{ cnodename }}-data" }
+            containers:
+            - name: fabric-peer
+              image: 'email4tong/fabricop:v1.0.0'
+              imagePullPolicy: Always
+              env:
+              - { name: "FABRIC_LOGGING_SPEC",                value: "{{ log_level }}" }
+              - { name: "FABRIC_CFG_PATH",                    value: "/var/hyperledger/production" }
+              - { name: "CORE_PEER_GOSSIP_USELEADERELECTION", value: "true" }
+              - { name: "CORE_PEER_GOSSIP_ORGLEADER",         value: "false" }
+              - { name: "CORE_PEER_TLS_ENABLED",              value: "true" }
+              - { name: "CORE_PEER_TLS_CERT_FILE",            value: "/var/hyperledger/fabric/tls/server.crt" }
+              - { name: "CORE_PEER_TLS_KEY_FILE",             value: "/var/hyperledger/fabric/tls/server.key" }
+              - { name: "CORE_PEER_TLS_ROOTCERT_FILE",        value: "/var/hyperledger/fabric/tls/ca.crt" }
+              - { name: "CORE_CHAINCODE_EXECUTETIMEOUT",      value: "300s" }
+              - { name: "CORE_PEER_ID",                       value: "{{ nodename }}" }
+              - { name: "CORE_PEER_MSPCONFIGPATH",            value: "/var/hyperledger/fabric/msp" }
+              - { name: "CORE_PEER_ADDRESS",                  value: "0.0.0.0:7051" }
+              - { name: "CORE_PEER_LISTENADDRESS",            value: "0.0.0.0:7051" }
+              - { name: "CORE_PEER_GOSSIP_BOOTSTRAP",         value: "{{ ansible_operator_meta.name }}:7051" }
+              - { name: "CORE_PEER_GOSSIP_EXTERNALENDPOINT",  value: "{{ ansible_operator_meta.name }}:7051" }
+              - { name: "CORE_PEER_LOCALMSPID",               value: "{{ mspid }}" }
+              - { name: "CORE_CHAINCODE_LOGGING_LEVEL",       value: "{{ log_level }}" }
+              volumeMounts:
+              - { mountPath: "/var/hyperledger/fabric/msp", name: "nodecert" }
+              - { mountPath: "/var/hyperledger/fabric/tls", name: "nodetlscert" }
+              - { mountPath: "/var/hyperledger/production", name: "{{ cnodename }}-data" }
+              command: ['/var/hyperledger/production/peer']
+              args: ["node", "start"]
+
+- name: Add gateway and virtual service
+  include_tasks: "{{ role_path }}/../../playbooks/add-gw-vs.yaml"
+
+- name: Check the existance of the gateway
+  community.kubernetes.k8s_info:
+    api_version: 'networking.istio.io/v1beta1'
+    kind: Gateway
+    name: '{{ ansible_operator_meta.name }}-gateway'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: thegateway
+
+# Update the crd to have endpoints and other possible information
+- name: update the crd status
+  when: thegateway.resources | length == 1
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: Peer
+    name: "{{ ansible_operator_meta.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+    status:
+      endpoint: '{{ istio_hostname }}:{{ thegateway.resources[0].spec.servers[0].port.number }}'

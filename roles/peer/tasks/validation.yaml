@@ -1,0 +1,8 @@
+- name: Check if the organization variable is set
+  fail:
+    msg: "organization must be provided in the request"
+  when: organization == None or (organization|trim) == ''
+
+- name: Set mspid
+  set_fact:
+    mspid: "{{ ansible_operator_meta.name }}-{{ organization|replace('.', '-') }}"

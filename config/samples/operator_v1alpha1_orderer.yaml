@@ -6,6 +6,6 @@ spec:
   # Add fields here
   organization: example.com
   nodeCert:
-  release: 2.4
+  release: 2.3.2
   storage: 5Gi
   logLevel: DEBUG

@@ -30,9 +30,10 @@
     path: "{{ certdir }}/{{ partyid }}.csr"
     privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
     subject:
-      OU: "{{ partytype | capitalize }}"
+      OU: "{{ partytype | lower }}"
       O: "{{ organization }}"
-    subject_alt_name: "DNS:{{ nodename }},DNS:{{ istio_hostname }}"
+    subject_alt_name: >-
+      DNS:{{ nodename }}{{ (istio_hostname=='')|ternary('', ',DNS:'+istio_hostname) }}{{ (istio_ip=='')|ternary('', ',IP:'+istio_ip) }}
     common_name: "{{ partycn }}"
     basic_constraints_critical: yes
     basic_constraints: 

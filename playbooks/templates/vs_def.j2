@@ -5,7 +5,7 @@ metadata:
   namespace: '{{ ansible_operator_meta.namespace }}'
 spec:
   hosts:
-  - '{{ istio_hostname }}'
+  - '{{ (istio_hostname=="")|ternary("*", istio_hostname) }}'
   gateways:
   - '{{ ansible_operator_meta.name }}-gateway'
   tcp:

@@ -12,4 +12,4 @@ spec:
       name: tcp{{ ext_port }}
       protocol: TCP
     hosts:
-    - '{{ istio_hostname }}'
+    - '{{ (istio_hostname=="")|ternary("*", istio_hostname) }}'

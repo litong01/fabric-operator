@@ -1,0 +1,25 @@
+- name: Start fabric operations
+  hosts: localhost
+  gather_facts: no
+  connection: local
+  tasks:
+    - get_url:
+        url: "https://github.com/hyperledger/fabric/releases/download/v{{ RELEASE }}/hyperledger-fabric-linux-amd64-{{ RELEASE }}.tar.gz"
+        dest: '/var/hyperledger/production/fabricbin.tar.gz'
+
+    - unarchive:
+        src: '/var/hyperledger/production/fabricbin.tar.gz'
+        dest: '/var/hyperledger/production'
+        mode: 'u+x'
+        group: '0'
+        owner: '1001'
+
+    - name: Copy peer to right place
+      copy:
+        src: '/var/hyperledger/production/bin/peer'
+        dest: '/var/hyperledger/production/peer'
+
+    - name: Copy core.yaml to right place
+      copy:
+        src: '/var/hyperledger/production/config/core.yaml'
+        dest: '/var/hyperledger/production/core.yaml'
