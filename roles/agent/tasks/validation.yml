@@ -32,3 +32,4 @@
   set_fact:
     bindir: "{{ lookup('env','HOME') }}/agent/{{ release }}"
     workdir: "{{ lookup('env','HOME') }}/agent/{{ 99999999 | random | to_uuid }}"
+    orgid: "{{ organization | replace('.', '-') }}"

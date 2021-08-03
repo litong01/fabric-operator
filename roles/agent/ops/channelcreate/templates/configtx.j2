@@ -1,0 +1,115 @@
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: {{ orgid }}
+    MSPDir: {{ workdir }}/{{ orgid }}/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('{{ orgid }}.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('{{ orgid }}.peer')"
+    OrdererEndpoints:
+    - orderer.example.com:7050
+
+Capabilities:
+    Channel: &ChannelCapabilities
+        V2_0: true
+
+    Orderer: &OrdererCapabilities
+        V2_0: true
+
+    Application: &ApplicationCapabilities
+        V2_0: true
+
+Application: &ApplicationDefaults
+    Organizations:
+
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        LifecycleEndorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+        Endorsement:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Endorsement"
+
+    Capabilities:
+        <<: *ApplicationCapabilities
+Orderer: &OrdererDefaults
+    OrdererType: etcdraft
+    Addresses:
+        - {{ initialOrdererNode }}:7050
+
+    EtcdRaft:
+        Consenters:
+        - Host: {{ initialOrdererNode }}:7050
+          Port: 7050
+          ClientTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
+          ServerTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
+
+    BatchTimeout: 2s
+    BatchSize:
+        MaxMessageCount: 10
+        AbsoluteMaxBytes: 99 MB
+        PreferredMaxBytes: 512 KB
+
+    Organizations:
+
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+        BlockValidation:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+    Policies:
+        Readers:
+            Type: ImplicitMeta
+            Rule: "ANY Readers"
+        Writers:
+            Type: ImplicitMeta
+            Rule: "ANY Writers"
+        Admins:
+            Type: ImplicitMeta
+            Rule: "MAJORITY Admins"
+
+    Capabilities:
+        <<: *ChannelCapabilities
+
+Profiles:
+    ApplicationGenesis:
+        <<: *ChannelDefaults
+        Orderer:
+            <<: *OrdererDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities: *OrdererCapabilities
+        Application:
+            <<: *ApplicationDefaults
+            Organizations:
+                - *OrdererOrg
+            Capabilities: *ApplicationCapabilities

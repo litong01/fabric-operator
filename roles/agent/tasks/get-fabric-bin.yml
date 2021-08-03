@@ -4,7 +4,7 @@
     state: 'directory'
     mode: 0775
   with_items:
-  - '{{ workdir }}'
+  - '{{ workdir }}/{{ orgid }}'
   - '{{ bindir }}'
 
 - name: Check if the binary already exists
@@ -28,7 +28,7 @@
   - name: Copy config to right place
     copy:
       src: '{{ bindir }}/config'
-      dest: '{{ workdir }}'
+      dest: '{{ workdir }}/{{ orgid }}'
 
   - name: Remove the tar gz file since it is no longer needed
     file:

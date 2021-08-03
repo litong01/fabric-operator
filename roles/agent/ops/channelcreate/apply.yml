@@ -1,3 +1,77 @@
+# To create a new channel, an action must look like this
+#
+# - name: channelcreate
+#   description: Create new channel
+#   params:
+#   - name: channelName
+#     value: mychannel
+#   - name: initialOrdererNode
+#     value: orderer-sample
+#
+# The initialOrdererNode's node secret has to be available
+# on the cluster.
+
 - name: Show the passed in variable
   debug:
     var: action
+
+- name: Get variable with their names
+  set_fact:
+    channelName: >-
+      {{ (action.params | selectattr('name','equalto','channelName') | map(attribute='value') | list)[0] }}
+    initialOrdererNode: >-
+      {{ (action.params | selectattr('name','equalto','initialOrdererNode') | map(attribute='value') | list)[0] }}
+
+- name: Search for the orderer matching node cert secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ initialOrdererNode }}-{{ orgid }}-nodecert'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: nodecert_secret
+
+- name: Fail the process if there is no orderer secret found
+  fail:
+    msg: 'Cannot find the orderer node {{ initialOrdererNode }} certificates.'
+  when: (nodecert_secret.resources|length) == 0
+
+- name: Place the certs in the right place
+  debug:
+    var: workdir
+
+- name: Get certs directory set up
+  file:
+    path: '{{ workdir }}/{{ orgid }}/{{ item }}'
+    state: 'directory'
+    mode: 0775
+  with_items:
+  - 'config'
+  - 'msp'
+  - 'msp/admincerts'
+  - 'msp/cacerts'
+  - 'msp/tlscacerts'
+  - 'tls'
+
+- name: Write certs to the correct location
+  copy:
+    content: '{{ nodecert_secret.resources[0].data[item.src]|b64decode }}'
+    dest: '{{ workdir }}/{{ orgid }}/{{ item.dest }}'
+  with_items:
+  - "{{ { 'src': 'admin.crt', 'dest': 'msp/admincerts/admin.pem'} }}"
+  - "{{ { 'src': 'ca.crt', 'dest': 'msp/cacerts/ca.pem'} }}"
+  - "{{ { 'src': 'tlsca.crt', 'dest': 'msp/tlscacerts/tlsca.pem'} }}"
+  - "{{ { 'src': 'config.yaml', 'dest': 'msp/config.yaml'} }}"
+  - "{{ { 'src': 'server.crt', 'dest': 'tls/server.crt'} }}"
+
+- name: Setup configtx file
+  template:
+    src: '{{ role_path }}/ops/{{ action.name }}/templates/configtx.j2'
+    dest: '{{ workdir }}/{{ orgid }}/config/configtx.yaml'
+
+- name: Now create the genesis block
+  ansible.builtin.shell: |
+    export FABRIC_CFG_PATH={{ workdir }}/{{ orgid }}/config
+    {{ bindir }}/bin/configtxgen -profile ApplicationGenesis -outputBlock mychannel.block -channelID mychannel
+  args:
+    chdir: '{{ workdir }}/{{ orgid }}/config'
+    executable: /bin/bash

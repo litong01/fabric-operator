@@ -12,5 +12,5 @@ spec:
     params:
     - name: channelName
       value: tongli
-    - name: channelSize
-      value: 5
+    - name: initialOrdererNode
+      value: orderer-sample
