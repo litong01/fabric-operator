@@ -27,6 +27,7 @@
 #   tlsca.crt:
 #   tls.key:
 #   tls.crt:
+#   config.yaml
 #   admin.key:
 #   admin.crt:
 #

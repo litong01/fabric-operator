@@ -27,10 +27,14 @@ organization:
 #   admin.crt:
 nodeCert:
 
-# ca node fabric release, the valid number must match available fabric ca
-# releases which is available as tag on each hyperledger/fabric-ca.
-# These tags can be found by search docker hub.
-release: 2.4
+# peer node fabric release, the valid number must match available fabric peer
+# releases which is available here https://github.com/hyperledger/fabric/releases
+# Since the operator download the executable from the URL pointed repository, the
+# valid releases must be one of the releases appeared in that list which always
+# comes with 3 parts separated by dot. For example 2.3.2 is a valid release value
+# since it matches one of the releases. where 2.3 is not a valid release since
+# the release site wont have a match release.
+release: 2.3.2
 
 # ca node storage size, this has to be valid kubernetes storage size
 storage: 5Gi

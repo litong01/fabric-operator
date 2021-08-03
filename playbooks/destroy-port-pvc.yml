@@ -1,0 +1,11 @@
+---
+# This playbook removes port and pvc which related the CRD
+- name: Update istio system
+  hosts: localhost
+  gather_facts: no
+  connection: local
+  tasks:
+  - name: Remove port from istio
+    include_tasks: 'remove-gw-port.yml'
+  - name: Remove PVC
+    include_tasks: 'remove-pvc.yml'

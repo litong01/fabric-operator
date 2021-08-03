@@ -1,0 +1,20 @@
+---
+# The tasks to remove port from istio
+- name: Get istio information
+  include_tasks: "get-istio-info.yaml"
+
+- name: Get the gateway info
+  community.kubernetes.k8s_info:
+    name: '{{ ansible_operator_meta.name }}-gateway'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    api_version: 'networking.istio.io/v1beta1'
+    kind: Gateway
+  register: thegateway
+
+- name: Remove the port from istio system
+  when: (thegateway.resources|length) == 1
+  community.kubernetes.k8s:
+    definition: "{{ lookup('template', 'templates/'+item+'_del.j2')|from_yaml }}"
+  with_items:
+  - service
+  - deployment

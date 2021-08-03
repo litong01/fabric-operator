@@ -1,0 +1,9 @@
+---
+# This playbook removes port related to the CRD
+- name: Update istio system
+  hosts: localhost
+  gather_facts: no
+  connection: local
+  tasks:
+  - name: Remove port from istio
+    include_tasks: 'remove-gw-port.yml'
