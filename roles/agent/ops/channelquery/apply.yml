@@ -1,0 +1,3 @@
+- name: Show the passed in variable
+  debug:
+    var: action

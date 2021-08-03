@@ -7,9 +7,17 @@ organization:
 # type of the agent, the valid values are admin, user
 type:
 
-# actions to be performed
-action:
-  name:
+# action performed under whose behave
+nodeCert:
+
+# ca node fabric release, the valid number must match available fabric ca
+# releases which is available as tag on each hyperledger/fabric-ca.
+# These tags can be found by search docker hub.
+release: 2.3.2
+
+# actions to be performed, actions will be executed in the sequence defined
+actions:
+- name:
   description:
   params:
   - name:

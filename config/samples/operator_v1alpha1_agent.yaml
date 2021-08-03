@@ -5,8 +5,9 @@ metadata:
 spec:
   organization: example.com
   type: Admin
-  action:
-    name: ChannelCreate
+  nodeCert:
+  actions:
+  - name: channelcreate
     description: Create new channel
     params:
     - name: channelName

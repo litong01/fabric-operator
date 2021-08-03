@@ -1,23 +1,13 @@
 ---
 # tasks file for Agent
-- name: Just show some values
-  debug:
-    var: action
-
-- name: Show all available variables
-  debug:
-    var: ansible_role_name
-
-- name: Show all available variables
-  debug:
-    var: role_name
-
-- name: Show all available variables
-  debug:
-    var: hostvars
-
 - name: Validate configurations
   include_tasks: 'validation.yml'
 
 - name: Get binary
   include_tasks: 'get-fabric-bin.yml'
+
+- name: Execute the action
+  include_tasks: '{{ role_path }}/ops/{{ action.name }}/apply.yml'
+  loop: '{{ actions }}'
+  loop_control:
+    loop_var: action

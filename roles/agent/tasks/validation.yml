@@ -8,7 +8,27 @@
     msg: "agent type must be provided and be admin or user"
   when: type == None or (type|trim) == '' or ((type|lower) not in ('admin', 'user'))
 
+- name: Get all the actions
+  set_fact:
+    allactions: '{{ actions | map(attribute="name") | list }}'
+
+- name: Get available actions
+  find:
+    paths: '{{ role_path }}/ops'
+    recurse: no
+    file_type: directory
+  register: availableactions_var
+
+- name: Get supported actions
+  set_fact:
+    supactions: "{{ availableactions_var.files | map(attribute='path') | list | map('basename') | list }}"
+
+- name: Validate all actions must be part of supported
+  fail:
+    msg: 'Action {{ allactions | difference(supactions) | join(",") }} not supported!'
+  when: (allactions | difference(supactions) | length) > 0
+
 - name: Set work directory
   set_fact:
-    bindir: "{{ lookup('env','HOME') }}/agent"
+    bindir: "{{ lookup('env','HOME') }}/agent/{{ release }}"
     workdir: "{{ lookup('env','HOME') }}/agent/{{ 99999999 | random | to_uuid }}"

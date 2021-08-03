@@ -1,8 +1,11 @@
 - name: Make sure that working directory exists
   file:
-    path: '{{ workdir }}'
+    path: '{{ item }}'
     state: 'directory'
     mode: 0775
+  with_items:
+  - '{{ workdir }}'
+  - '{{ bindir }}'
 
 - name: Check if the binary already exists
   stat:
@@ -14,11 +17,20 @@
   block:
   - name: Get the tar file
     get_url:
-      url: https://github.com/hyperledger/fabric/releases/download/v2.3.2/hyperledger-fabric-linux-amd64-2.3.2.tar.gz
-      dest: '{{ bindir }}'
+      url: 'https://github.com/hyperledger/fabric/releases/download/v{{ release }}/hyperledger-fabric-linux-amd64-{{ release }}.tar.gz'
+      dest: '{{ bindir }}/fabricbin.tar.gz'
 
   - name: Unpackage the tar file
     unarchive:
-      src: '{{ bindir }}/hyperledger-fabric-linux-amd64-2.3.2.tar.gz'
+      src: '{{ bindir }}/fabricbin.tar.gz'
       dest: '{{ bindir }}'
-      creates: '{{ bindir }}/bin/peer'
+
+  - name: Copy config to right place
+    copy:
+      src: '{{ bindir }}/config'
+      dest: '{{ workdir }}'
+
+  - name: Remove the tar gz file since it is no longer needed
+    file:
+      path: '{{ bindir }}/fabricbin.tar.gz'
+      state: 'absent'
