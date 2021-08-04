@@ -11,6 +11,6 @@ spec:
     description: Create new channel
     params:
     - name: channelName
-      value: tongli
+      value: mychannel
     - name: initialOrdererNode
       value: orderer-sample
