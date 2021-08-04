@@ -172,12 +172,6 @@
     namespace: '{{ ansible_operator_meta.namespace }}'
   register: thegateway
 
-- debug:
-    var: thegateway
-
-- debug:
-    var: istio_ip
-
 # Update the crd to have endpoints and other possible information
 - name: update the crd status
   when: thegateway.resources | length == 1

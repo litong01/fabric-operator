@@ -12,12 +12,21 @@
 # this module also uses nodename and istio_hostname for the subject
 # alternative name
 
-- name: Set party file name prefix
+- name: Set party file name prefix and SAN
   set_fact:
     partyid: "{{ party.id }}"
     partytype: "{{ party.type }}"
     partycn: "{{ party.cn }}"
     partytls: "{{ party.tls }}"
+    sans: >-
+      DNS:{{ansible_operator_meta.name }}.{{ ansible_operator_meta.namespace }},
+      DNS:{{ nodename }}
+      {{ (istio_hostname=='')|ternary('', ',DNS:'+istio_hostname) }}
+      {{ (istio_ip=='')|ternary('', ',IP:'+istio_ip) }}
+
+- name: Remove spaces from sans
+  set_fact:
+    sans: "{{ sans | replace(' ', '') }}"
 
 - name: Generate a private keys
   community.crypto.openssl_privatekey:
@@ -25,55 +34,67 @@
     curve: secp256r1
     type: ECC
 
-- name: Generate CSRs
-  community.crypto.openssl_csr:
-    path: "{{ certdir }}/{{ partyid }}.csr"
-    privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
-    subject:
-      OU: "{{ partytype | lower }}"
-      O: "{{ organization }}"
-    subject_alt_name: >-
-      DNS:{{ nodename }}{{ (istio_hostname=='')|ternary('', ',DNS:'+istio_hostname) }}{{ (istio_ip=='')|ternary('', ',IP:'+istio_ip) }}
-    common_name: "{{ partycn }}"
-    basic_constraints_critical: yes
-    basic_constraints: 
-    - '{{ (partytype == "ca") | ternary("CA:TRUE", "CA:FALSE") }}'
-    key_usage:
-    - digitalSignature
-    - keyEncipherment
-    - keyCertSign
-    - cRLSign
-    key_usage_critical: yes
-    extended_key_usage:
-    - clientAuth
-    - serverAuth
-    extended_key_usage_critical: yes
-
-# ca node uses selfsigned
-- name: Generate self-signed certificate based on CSRs
+- name: Process CA
   when: partytype == 'ca'
-  community.crypto.x509_certificate:
-    path: "{{ certdir }}/{{ partyid }}-cert.pem"
-    privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
-    csr_path: "{{ certdir }}/{{ partyid }}.csr"
-    provider: selfsigned
+  block:
+  - name: Generate CSR
+    community.crypto.openssl_csr:
+      path: "{{ certdir }}/{{ partyid }}.csr"
+      privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
+      subject:
+        OU: "{{ partytype | lower }}"
+        O: "{{ organization }}"
+      subject_alt_name: '{{ sans }}'
+      common_name: "{{ partycn }}"
+      basic_constraints_critical: yes
+      basic_constraints: 
+      - 'CA:TRUE'
+      key_usage:
+      - digitalSignature
+      - keyEncipherment
+      - keyCertSign
+      - cRLSign
+      key_usage_critical: yes
+      extended_key_usage:
+      - clientAuth
+      - serverAuth
+      extended_key_usage_critical: yes
 
-# TLS cert and key signed by root tls key
-- name: Generate signed certificate based on CSRs
-  when: partytype in ('peer', 'orderer') and partytls == True
-  community.crypto.x509_certificate:
-    path: "{{ certdir }}/{{ partyid }}-cert.pem"
-    csr_path: "{{ certdir }}/{{ partyid }}.csr"
-    ownca_content: "{{ cadata['tls-cert.pem'] | b64decode }}"
-    ownca_privatekey_content: "{{ cadata['tls-key.pem'] | b64decode }}"
-    provider: ownca
+  - name: Generate self-signed certificate
+    community.crypto.x509_certificate:
+      path: "{{ certdir }}/{{ partyid }}-cert.pem"
+      privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
+      csr_path: "{{ certdir }}/{{ partyid }}.csr"
+      provider: selfsigned
 
-# Non TLS cert and key signed by root CA key
-- name: Generate signed certificate based on CSRs
-  when: partytype in ('peer', 'orderer', 'user', 'admin') and partytls == False
-  community.crypto.x509_certificate:
-    path: "{{ certdir }}/{{ partyid }}-cert.pem"
-    csr_path: "{{ certdir }}/{{ partyid }}.csr"
-    ownca_content: "{{ cadata['ca-cert.pem'] | b64decode }}"
-    ownca_privatekey_content: "{{ cadata['ca-key.pem'] | b64decode }}"
-    provider: ownca
+- name: Process other request
+  when: partytype != 'ca'
+  block:
+  - name: Generate CSRs
+    when: partytype != 'ca'
+    community.crypto.openssl_csr:
+      path: "{{ certdir }}/{{ partyid }}.csr"
+      privatekey_path: "{{ certdir }}/{{ partyid }}-key.pem"
+      subject:
+        OU: "{{ partytype | lower }}"
+        O: "{{ organization }}"
+      subject_alt_name: '{{ sans }}'
+      common_name: "{{ partycn }}"
+      basic_constraints_critical: yes
+      basic_constraints: 
+      - 'CA:FALSE'
+      key_usage:
+      - digitalSignature
+      key_usage_critical: yes
+
+  - name: Select sign key
+    set_fact:
+      signing: "{{ (partytls == True)|ternary('tls-', 'ca-') }}"
+
+  - name: Generate signed certificate based on CSRs
+    community.crypto.x509_certificate:
+      path: "{{ certdir }}/{{ partyid }}-cert.pem"
+      csr_path: "{{ certdir }}/{{ partyid }}.csr"
+      ownca_content: "{{ cadata[signing+'cert.pem'] | b64decode }}"
+      ownca_privatekey_content: "{{ cadata[signing+'key.pem'] | b64decode }}"
+      provider: ownca

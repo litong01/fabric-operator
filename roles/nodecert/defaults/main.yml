@@ -40,3 +40,83 @@ organization: example.com
 # the certificate will be either self signed if none exist. If the
 # matching secret already exists, then no secret will be created.
 nodeType: CA
+
+# CA cert
+#        X509v3 extensions:
+#            X509v3 Subject Key Identifier:
+#                83:FE:48:D9:70:04:80:74:E0:5E:EA:4B:3B:4C:BC:59:30:EB:D2:D4
+#            X509v3 Authority Key Identifier:
+#                keyid:83:FE:48:D9:70:04:80:74:E0:5E:EA:4B:3B:4C:BC:59:30:EB:D2:D4
+#
+#            X509v3 Basic Constraints: critical
+#                CA:TRUE
+#            X509v3 Key Usage: critical
+#                Digital Signature, Key Encipherment, Certificate Sign, CRL Sign
+#            X509v3 Extended Key Usage:
+#                TLS Web Server Authentication, TLS Web Client Authentication
+#            X509v3 Subject Alternative Name:
+#                IP Address:192.168.56.32, DNS:ca.example.com DNS.2:ca-example-com
+
+#  TLSCA cert
+#        X509v3 extensions:
+#            X509v3 Subject Key Identifier:
+#                21:07:A2:85:CF:04:CF:24:38:3F:18:64:2D:09:95:1E:6B:05:F1:F3
+#            X509v3 Authority Key Identifier:
+#                keyid:21:07:A2:85:CF:04:CF:24:38:3F:18:64:2D:09:95:1E:6B:05:F1:F3
+#
+#            X509v3 Basic Constraints: critical
+#                CA:TRUE
+#            X509v3 Key Usage: critical
+#                Digital Signature, Key Encipherment, Certificate Sign, CRL Sign
+#            X509v3 Extended Key Usage:
+#                TLS Web Server Authentication, TLS Web Client Authentication
+#            X509v3 Subject Alternative Name:
+#                IP Address:192.168.56.32, DNS:tlsca.example.com DNS.2:tlsca-example-com
+
+#  Admin cert
+#        X509v3 extensions:
+#            X509v3 Key Usage: critical
+#                Digital Signature
+#            X509v3 Basic Constraints: critical
+#                CA:FALSE
+#            X509v3 Subject Alternative Name:
+#                IP Address:192.168.56.32, DNS:Admin@example.com, DNS:Admin@example-com
+#            X509v3 Authority Key Identifier:
+#                keyid:83:FE:48:D9:70:04:80:74:E0:5E:EA:4B:3B:4C:BC:59:30:EB:D2:D4
+#
+
+#  Admin tls client cert
+#        X509v3 extensions:
+#            X509v3 Key Usage: critical
+#                Digital Signature
+#            X509v3 Basic Constraints: critical
+#                CA:FALSE
+#            X509v3 Subject Alternative Name:
+#                IP Address:192.168.56.32, DNS:Admin@example.com, DNS:Admin@example-com
+#            X509v3 Authority Key Identifier:
+#                keyid:21:07:A2:85:CF:04:CF:24:38:3F:18:64:2D:09:95:1E:6B:05:F1:F3
+
+#  Both Orderer and Peer node cert signcerts
+#        X509v3 extensions:
+#            X509v3 Key Usage: critical
+#                Digital Signature
+#            X509v3 Basic Constraints: critical
+#                CA:FALSE
+#            X509v3 Subject Alternative Name:
+#                IP Address:192.168.56.32, DNS:orderer1.example.com, DNS:orderer1-example-com
+#            X509v3 Authority Key Identifier:
+#                keyid:83:FE:48:D9:70:04:80:74:E0:5E:EA:4B:3B:4C:BC:59:30:EB:D2:D4
+
+#  Both Orderer and Peer node tls server.crt
+#        X509v3 extensions:
+#            X509v3 Key Usage: critical
+#                Digital Signature
+#            X509v3 Basic Constraints: critical
+#                CA:FALSE
+#            X509v3 Subject Alternative Name:
+#                IP Address:192.168.56.32, DNS:orderer1.example.com, DNS:orderer1-example-com
+#            X509v3 Authority Key Identifier:
+#                keyid:21:07:A2:85:CF:04:CF:24:38:3F:18:64:2D:09:95:1E:6B:05:F1:F3
+
+# TLS cert does not contain OU=client, peer, orderer or admin
+# Only the cert identifies itself as client, peer, orderer or admin

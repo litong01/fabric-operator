@@ -22,6 +22,11 @@
     initialOrdererNode: >-
       {{ (action.params | selectattr('name','equalto','initialOrdererNode') | map(attribute='value') | list)[0] }}
 
+- name: Fail the process if either variable is empty
+  fail:
+    msg: 'Both channel name and initial orderer node must be provided'
+  when: channelName == '' or initialOrdererNode == ''
+
 - name: Search for the orderer matching node cert secret
   community.kubernetes.k8s_info:
     kind: Secret
@@ -49,7 +54,9 @@
   - 'msp'
   - 'msp/admincerts'
   - 'msp/cacerts'
+  - 'msp/signcerts'
   - 'msp/tlscacerts'
+  - 'msp/keystore'
   - 'tls'
 
 - name: Write certs to the correct location
@@ -57,11 +64,12 @@
     content: '{{ nodecert_secret.resources[0].data[item.src]|b64decode }}'
     dest: '{{ workdir }}/{{ orgid }}/{{ item.dest }}'
   with_items:
-  - "{{ { 'src': 'admin.crt', 'dest': 'msp/admincerts/admin.pem'} }}"
   - "{{ { 'src': 'ca.crt', 'dest': 'msp/cacerts/ca.pem'} }}"
-  - "{{ { 'src': 'tlsca.crt', 'dest': 'msp/tlscacerts/tlsca.pem'} }}"
+  - "{{ { 'src': 'tlsca.crt', 'dest': 'msp/tlscacerts/ca.crt'} }}"
+  - "{{ { 'src': 'tlsca.crt', 'dest': 'tls/ca.crt'} }}"
+  - "{{ { 'src': 'tls.crt', 'dest': 'tls/server.crt'} }}"
+  - "{{ { 'src': 'tls.key', 'dest': 'tls/server.key'} }}"
   - "{{ { 'src': 'config.yaml', 'dest': 'msp/config.yaml'} }}"
-  - "{{ { 'src': 'server.crt', 'dest': 'tls/server.crt'} }}"
 
 - name: Setup configtx file
   template:
@@ -71,7 +79,19 @@
 - name: Now create the genesis block
   ansible.builtin.shell: |
     export FABRIC_CFG_PATH={{ workdir }}/{{ orgid }}/config
-    {{ bindir }}/bin/configtxgen -profile ApplicationGenesis -outputBlock mychannel.block -channelID mychannel
+    {{ bindir }}/bin/configtxgen -profile ApplicationGenesis \
+    -outputBlock newc.bk -channelID {{ channelName }}
+  args:
+    chdir: '{{ workdir }}/{{ orgid }}/config'
+    executable: /bin/bash
+
+- name: Join the orderer node to the channel
+  ansible.builtin.shell: |
+    export FABRIC_CFG_PATH={{ workdir }}/{{ orgid }}/config
+    {{ bindir }}/bin/osnadmin channel join --channelID {{ channelName }} \
+    -o {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7080 \
+    --config-block newc.bk --ca-file ../tls/ca.crt \
+    --client-cert ../tls/server.crt --client-key ../tls/server.key
   args:
     chdir: '{{ workdir }}/{{ orgid }}/config'
     executable: /bin/bash

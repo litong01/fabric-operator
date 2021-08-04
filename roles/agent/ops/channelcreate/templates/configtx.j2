@@ -6,10 +6,10 @@ Organizations:
     Policies:
       Readers:
         Type: Signature
-        Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.client')"
+        Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.orderer')"
       Writers:
         Type: Signature
-        Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.client')"
+        Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer','{{ orgid }}.orderer')"
       Admins:
         Type: Signature
         Rule: "OR('{{ orgid }}.admin')"
@@ -17,7 +17,7 @@ Organizations:
         Type: Signature
         Rule: "OR('{{ orgid }}.peer')"
     OrdererEndpoints:
-    - orderer.example.com:7050
+    - {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7050
 
 Capabilities:
     Channel: &ChannelCapabilities
@@ -54,11 +54,11 @@ Application: &ApplicationDefaults
 Orderer: &OrdererDefaults
     OrdererType: etcdraft
     Addresses:
-        - {{ initialOrdererNode }}:7050
+        - {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7050
 
     EtcdRaft:
         Consenters:
-        - Host: {{ initialOrdererNode }}:7050
+        - Host: {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7050
           Port: 7050
           ClientTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
           ServerTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
