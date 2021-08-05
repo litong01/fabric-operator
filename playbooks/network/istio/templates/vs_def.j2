@@ -5,14 +5,16 @@ metadata:
   namespace: '{{ ansible_operator_meta.namespace }}'
 spec:
   hosts:
-  - '{{ (istio_hostname=="")|ternary("*", istio_hostname) }}'
+  - '{{ (NODE_HOSTNAME=="")|ternary("*", NODE_HOSTNAME) }}'
   gateways:
   - '{{ ansible_operator_meta.name }}-gateway'
   tcp:
+{% for aport in EXT_PORTS %}
   - match:
-    - port: {{ ext_port }}
+    - port: {{ aport|int }}
     route:
     - destination:
         host: '{{ ansible_operator_meta.name }}'
         port:
-          number: 7054
+          number: {{ TARGET_PORTS[loop.index0] | int }}
+{% endfor %}

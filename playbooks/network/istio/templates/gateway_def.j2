@@ -7,9 +7,11 @@ spec:
   selector:
     istio: ingressgateway
   servers:
+{% for aport in EXT_PORTS %}
   - port:
-      number: {{ ext_port }}
-      name: tcp{{ ext_port }}
+      number: {{ aport|int }}
+      name: tcp{{ aport }}
       protocol: TCP
     hosts:
-    - '{{ (istio_hostname=="")|ternary("*", istio_hostname) }}'
+    - '{{ (NODE_HOSTNAME=="")|ternary("*", NODE_HOSTNAME) }}'
+{% endfor %}

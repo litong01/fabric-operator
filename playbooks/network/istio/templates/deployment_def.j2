@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: {{ istio_dep.resources[0].metadata.name }}
+  namespace: {{ istio_dep.resources[0].metadata.namespace }}
+  resourceVersion: '{{ istio_dep.resources[0].metadata.resourceVersion }}'
+spec:
+  template:
+    spec:
+      containers:
+      - name: istio-proxy
+        ports:
+{% for aport in EXT_PORTS %}
+        - containerPort: {{ aport | int }}
+          protocol: TCP
+{% endfor %}

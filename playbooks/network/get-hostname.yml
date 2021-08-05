@@ -1,0 +1,53 @@
+# This module retrieves istio hostname from ingress gateway
+# This module returns a domain name, this name will be used
+# as part of the node endpoint for node such as CA, Orderer
+# and Peer. The name most likely comes from a load balancer
+# such as istio ingress gateway or nginx ingress controller
+# it will set up three global variable named:
+#
+#    NODE_HOSTNAME
+#    NODE_IP
+#    LB_TYPE
+# LBTYPE can be either NGINX or ISTIO. This is setup based
+# on the auto detection
+
+# Try to search for Istio
+- name: Search for all istio ingress gateway services
+  community.kubernetes.k8s_info:
+    kind: Service
+    label_selectors:
+      - app = istio-ingressgateway
+      - istio = ingressgateway
+      - release = istio
+      - operator.istio.io/component = IngressGateways
+  register: istio_svc
+
+- name: Get istio info when there is ingress service
+  when: istio_svc.resources|length > 0
+  block:
+  - name: Allow istio injection
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: "{{ ansible_operator_meta.namespace }}"
+      merge_type: strategic-merge
+      definition:
+        metadata:
+          labels:
+            istio-injection: enabled
+
+  - name: Set up variables
+    set_fact:
+      istio_namespace: "{{ istio_svc.resources[0].metadata.namespace | default('') }}"
+      istio_service_name: "{{ istio_svc.resources[0].metadata.name | default('') }}"
+      NODE_HOSTNAME: "{{ istio_svc.resources[0].status.loadBalancer.ingress[0].hostname | default('') }}"
+      NODE_IP: "{{ istio_svc.resources[0].status.loadBalancer.ingress[0].ip | default('') }}"
+      LB_TYPE: 'ISTIO'
+
+# Here check other possible load balancers such as Nginx ingress controller
+# To do
+
+- name: Fail if no istio service found
+  when: istio_svc.resources|length == 0
+  fail:
+    msg: "No ingress gateway found, please make sure that the istio ingress gateway is available."

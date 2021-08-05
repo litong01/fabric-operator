@@ -2,9 +2,8 @@
 - name: Validate configurations
   include_tasks: "validation.yml"
 
-# Try to get istio info
-- name: Get istio info
-  include_tasks: "{{ role_path }}/../../playbooks/get-istio-hostname.yml"
+- name: Get NODE_HOSTNAME or NODE_IP info
+  include_tasks: "{{ role_path }}/../../playbooks/network/get-hostname.yml"
 
 - name: Search for the Orderer node
   community.kubernetes.k8s_info:
@@ -195,26 +194,23 @@
 # running, now expose the node endpoint
 
 # The following tasks are all for exposing the node endpoint to
-# outside of the k8s cluster using istio
-# When include another playbook, only role_path can be used
-# both playbook_dir and inventory_dir will be mapped to tmp directory
-- name: Get istio information and available port
-  include_tasks: "{{ role_path }}/../../playbooks/get-istio-info.yml"
+# outside of the k8s cluster
+- name: Setup target ports
+  set_fact:
+    TARGET_PORTS: '{{ [7050, 7058] }}'
+    EXT_PORTS: '{{ [] }}'
 
-- name: Add gateway and virtual service
-  include_tasks: "{{ role_path }}/../../playbooks/add-gw-vs.yml"
+# The module included here will expose the target ports to outside of k8s cluster and
+# will return a list of ports for the target ports
+- name: Now expose Orderer service to outside of the k8s cluster
+  include_tasks: '{{ role_path }}/../../playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
 
-- name: Check the existance of the gateway
-  community.kubernetes.k8s_info:
-    api_version: 'networking.istio.io/v1beta1'
-    kind: Gateway
-    name: '{{ ansible_operator_meta.name }}-gateway'
-    namespace: '{{ ansible_operator_meta.namespace }}'
-  register: thegateway
+- name: Check if the ports exposed correctly
+  fail:
+    msg: 'The ports were not exposed correctly, fail the task'
+  when: (EXT_PORTS|length) != (TARGET_PORTS|length)
 
-# Update the crd to have endpoints and other possible information
-- name: update the crd status
-  when: thegateway.resources | length == 1
+- name: Update the crd status
   operator_sdk.util.k8s_status:
     api_version: operator.fabric.hyperledger.org/v1alpha1
     kind: Orderer
@@ -222,4 +218,6 @@
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
       endpoint: >-
-        {{ (istio_hostname=='')|ternary(istio_ip, istio_hostname) }}:{{ thegateway.resources[0].spec.servers[0].port.number }}
+        {{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}
+      adminendpoint: >-
+        {{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[1] }}

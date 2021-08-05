@@ -20,8 +20,8 @@
       nodecertsecretname: '{{ mspid }}-nodecert'
       certdir: '{{ workdir }}/{{ mspid}}-nodecert'
 
-  - name: Get istio info
-    include_tasks: '{{ role_path }}/../../playbooks/get-istio-hostname.yml'
+  - name: Get NODE_HOSTNAME or NODE_IP
+    include_tasks: '{{ role_path }}/../../playbooks/network/get-hostname.yml'
 
   - name: Make sure that working directory exists
     file:

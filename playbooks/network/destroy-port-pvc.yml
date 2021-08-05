@@ -5,7 +5,9 @@
   gather_facts: no
   connection: local
   tasks:
+  - name: Check load balancer type
+    include_tasks: 'get-hostname.yml'
   - name: Remove port from istio
-    include_tasks: 'remove-gw-port.yml'
+    include_tasks: '{{ LB_TYPE|lower }}/remove-gw-port.yml'
   - name: Remove PVC
-    include_tasks: 'remove-pvc.yml'
+    include_tasks: '{{ LB_TYPE|lower }}/remove-pvc.yml'

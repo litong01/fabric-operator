@@ -9,8 +9,8 @@
 # peer node name, orderer node name, a user name, for example:
 #   party_cn: 'admin'
 #   party_cn: 'john'
-# this module also uses nodename and istio_hostname for the subject
-# alternative name
+# this module also uses nodename and NODE_HOSTNAME or NODE_IP for
+# the subject alternative name
 
 - name: Set party file name prefix and SAN
   set_fact:
@@ -21,8 +21,8 @@
     sans: >-
       DNS:{{ansible_operator_meta.name }}.{{ ansible_operator_meta.namespace }},
       DNS:{{ nodename }}
-      {{ (istio_hostname=='')|ternary('', ',DNS:'+istio_hostname) }}
-      {{ (istio_ip=='')|ternary('', ',IP:'+istio_ip) }}
+      {{ (NODE_HOSTNAME=='')|ternary('', ',DNS:'+NODE_HOSTNAME) }}
+      {{ (NODE_IP=='')|ternary('', ',IP:'+NODE_IP) }}
 
 - name: Remove spaces from sans
   set_fact:

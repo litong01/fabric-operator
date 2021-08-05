@@ -1,0 +1,108 @@
+# This module takes a list of ports which means the target
+# For example:
+#    [7054] for exposing CA node
+#    [7050, 7080] for exposing orderer node ports
+#    [7051] for exposing peer node
+# The list variable name must be TARGET_PORTS
+
+- name: Check if the target ports have been defined
+  fail:
+    msg: 'No target ports passed in, fail the task'
+  when: (TARGET_PORTS is undefined) or (TARGET_PORTS|length) == 0
+
+- name: Search for istio ingress 
+  community.kubernetes.k8s_info:
+    kind: "Service"
+    name: '{{ istio_service_name }}'
+    namespace: '{{ istio_namespace }}'
+  register: istio_svc
+
+- name: Fail the process if some how the service no longer exists
+  when: istio_svc.resources|length == 0
+  fail:
+    msg: "Istio system was lost, please make sure that the istio ingress service is running"
+
+- name: Search for all istio ingress gateway deployment
+  community.kubernetes.k8s_info:
+    kind: 'Deployment'
+    label_selectors:
+      - app = istio-ingressgateway
+      - istio = ingressgateway
+      - release = istio
+      - operator.istio.io/component = IngressGateways
+  register: istio_dep
+
+- name: Fail the task if istio deployment cannot be found
+  fail:
+    msg: 'Istio deployment cannot be found, make sure that istio system is running.'
+  when: istio_dep.resources|length == 0
+
+- name: Get all the used and usable ports
+  set_fact:
+    used_ports: "{{ istio_svc.resources[0].spec.ports | map(attribute='port') | list | map('string') | list }}"
+    all_ports: "{{ lookup('sequence', 'start=31000 end=32000', wantlist=True) }}"
+
+- name: Find first available port
+  set_fact:
+    usable_port: "{{ (all_ports | difference(used_ports)) }}"
+
+# Now we have both istio service and deployment, let proceed update Istio system
+
+- name: Check the existance of the gateway
+  community.kubernetes.k8s_info:
+    name: '{{ ansible_operator_meta.name }}-gateway'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    api_version: 'networking.istio.io/v1beta1'
+    kind: Gateway
+  register: thegateway
+
+# Now we will need to create gateway for the node when there is none
+- name: Create the gateway for the node
+  when: (thegateway.resources|length) == 0
+  block:
+  - name: Allocate new ports
+    set_fact:
+      EXT_PORTS: "{{ usable_port[0:(TARGET_PORTS|length)] }}"
+
+  - name: Create the gateway
+    community.kubernetes.k8s:
+      state: present
+      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/gateway_def.j2')|from_yaml }}"
+
+  - name: Adding the port to istio ingress service
+    community.kubernetes.k8s:
+      merge_type: strategic-merge
+      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/service_def.j2')|from_yaml }}"
+
+  # Update istio deployment with the new port
+  - name: Adding the port to istio ingress deployment
+    community.kubernetes.k8s:
+      merge_type: strategic-merge
+      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/deployment_def.j2')|from_yaml }}"
+
+  - name: Check the existance of the virtual service
+    community.kubernetes.k8s_info:
+      name: '{{ ansible_operator_meta.name }}-virtualservice'
+      namespace: '{{ ansible_operator_meta.namespace }}'
+      api_version: 'networking.istio.io/v1beta1'
+      kind: VirtualService
+    register: thevs
+  
+  # Now we will create virtual service to route the traffic to the node
+  - name: Create the virtual service for the node
+    when: (thevs.resources|length) == 0
+    community.kubernetes.k8s:
+      merge_type: strategic-merge
+      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/vs_def.j2')|from_yaml }}"
+
+- name: Check the existance of the gateway
+  community.kubernetes.k8s_info:
+    name: '{{ ansible_operator_meta.name }}-gateway'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    api_version: 'networking.istio.io/v1beta1'
+    kind: Gateway
+  register: thegateway
+
+- name: Reset the EXT_PORTS
+  set_fact:
+    EXT_PORTS: "{{ thegateway.resources[0].spec.servers|map(attribute='port')|list|map(attribute='number')|list }}"
