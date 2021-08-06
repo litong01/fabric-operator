@@ -144,4 +144,21 @@ rules:
       - patch
       - update
       - watch
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Chaincode
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - chaincodes
+      - chaincodes/status
+      - chaincodes/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
 #+kubebuilder:scaffold:rules

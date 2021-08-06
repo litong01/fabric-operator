@@ -29,4 +29,8 @@
   group: operator.fabric.hyperledger.org
   kind: Agent
   role: agent
+- version: v1alpha1
+  group: operator.fabric.hyperledger.org
+  kind: Chaincode
+  role: chaincode
 #+kubebuilder:scaffold:watch
