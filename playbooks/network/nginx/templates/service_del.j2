@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ nginx_svc.metadata.name }}
+  namespace: {{ nginx_svc.metadata.namespace }}
+  resourceVersion: '{{ nginx_svc.metadata.resourceVersion }}'
+spec:
+  ports:
+{% for aport in toberemoved %}
+  - name: tcp{{ aport.key }}
+    port: {{ aport.key }}
+    protocol: TCP
+    targetPort: {{ aport.key }}
+    $patch: delete
+{%  endfor %}

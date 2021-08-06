@@ -11,8 +11,12 @@
 # LBTYPE can be either NGINX or ISTIO. This is setup based
 # on the auto detection
 
-# Try to search for Istio
+- set_fact:
+    should_continue: True
+
+# Search for Istio
 - name: Search for all istio ingress gateway services
+  when: should_continue == True
   community.kubernetes.k8s_info:
     kind: Service
     label_selectors:
@@ -42,12 +46,46 @@
       istio_service_name: "{{ istio_svc.resources[0].metadata.name | default('') }}"
       NODE_HOSTNAME: "{{ istio_svc.resources[0].status.loadBalancer.ingress[0].hostname | default('') }}"
       NODE_IP: "{{ istio_svc.resources[0].status.loadBalancer.ingress[0].ip | default('') }}"
-      LB_TYPE: 'ISTIO'
+      LB_TYPE: 'istio'
 
-# Here check other possible load balancers such as Nginx ingress controller
-# To do
+  - set_fact:
+      should_continue: False
 
-- name: Fail if no istio service found
-  when: istio_svc.resources|length == 0
+- name: Search for nginx ingress controller services
+  when: should_continue == True
+  community.kubernetes.k8s_info:
+    kind: Service
+    label_selectors:
+    - app.kubernetes.io/component = controller
+    - app.kubernetes.io/instance = ingress-nginx
+  register: nginx_services
+
+- name: Get the controller service 
+  set_fact:
+    nginx_svc: '{{ item }}'
+  when: item.spec.type == 'LoadBalancer'
+  with_items: '{{ nginx_services.resources }}'
+
+- name: Get nginx info when there is nginx controller
+  when: nginx_svc is defined and should_continue == True
+  block:
+  - name: Set up variables
+    set_fact:
+      NODE_HOSTNAME: "{{ nginx_svc.status.loadBalancer.ingress[0].hostname | default('') }}"
+      NODE_IP: "{{ nginx_svc.status.loadBalancer.ingress[0].ip | default('') }}"
+      LB_TYPE: 'nginx'
+
+  - set_fact:
+      should_continue: False
+
+- name: Show the global variables
+  debug:
+    msg: 'NODE_HOSTNAME: {{ NODE_HOSTNAME }}  NODE_IP: {{ NODE_IP }}  LB_TYPE: {{ LB_TYPE }}'
+
+# When we reach this point, that means there is no way to expose the endpoint
+- name: Fail if no way to expose endpoints
+  when: should_continue == True
   fail:
-    msg: "No ingress gateway found, please make sure that the istio ingress gateway is available."
+    msg: |
+      Was not able to find a way to expose endpoints, please make sure that there
+      is a load balancer or ingress setup such as Istio or Nginx Ingress Controller

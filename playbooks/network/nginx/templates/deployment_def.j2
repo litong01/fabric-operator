@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ nginx_dep.resources[0].metadata.name }}
+  namespace: {{ nginx_dep.resources[0].metadata.namespace }}
+  resourceVersion: '{{ nginx_dep.resources[0].metadata.resourceVersion }}'
+spec:
+  template:
+    spec:
+      containers:
+      - name: controller
+        args:
+{% for eachitem in nginx_dep.resources[0].spec.template.spec.containers[0].args %}
+        - {{ eachitem }}
+{% endfor %}
+        - --tcp-services-configmap=$(POD_NAMESPACE)/fabric-tcp-services

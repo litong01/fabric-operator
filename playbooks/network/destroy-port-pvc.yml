@@ -10,4 +10,4 @@
   - name: Remove port from istio
     include_tasks: '{{ LB_TYPE|lower }}/remove-gw-port.yml'
   - name: Remove PVC
-    include_tasks: '{{ LB_TYPE|lower }}/remove-pvc.yml'
+    include_tasks: 'remove-pvc.yml'

@@ -1,0 +1,47 @@
+---
+- name: Search for all nginx ingress services
+  community.kubernetes.k8s_info:
+    kind: Service
+    label_selectors:
+    - app.kubernetes.io/component = controller
+    - app.kubernetes.io/instance = ingress-nginx
+  register: nginx_services
+
+- name: Get the controller service
+  set_fact:
+    nginx_svc: '{{ item }}'
+  when: item.spec.type == 'LoadBalancer'
+  with_items: '{{ nginx_services.resources }}'
+
+- name: Check the config map for nginx tcp services
+  when: nginx_svc is defined
+  block:
+  - name: Get the configmap
+    community.kubernetes.k8s_info:
+      name: 'fabric-tcp-services'
+      namespace: '{{ nginx_svc.metadata.namespace }}'
+      api_version: 'v1'
+      kind: ConfigMap
+    register: theconfigmap
+
+  - name: Check if the fabric service has been in the configmap
+    when: theconfigmap.resources|length == 1 and theconfigmap.resources[0].data is defined
+    block:
+    - name: Setup variables
+      set_fact:
+        served: '{{ theconfigmap.resources[0].data | dict2items | flatten | list }}'
+        entryprefix: '{{ ansible_operator_meta.namespace }}/{{ ansible_operator_meta.name }}'
+  
+    - name: Find the ones to be removed
+      set_fact:
+        toberemoved: '{{ (toberemoved | default( [] )) + [item] }}'
+      when: item.value is match(entryprefix)
+      with_items: '{{ served }}'
+
+    - name: Remove these ports from the configmap and service
+      when: (toberemoved is defined) and (toberemoved|length > 0)
+      community.kubernetes.k8s:
+        definition: "{{ lookup('template', 'templates/'+item+'_del.j2')|from_yaml }}"
+      with_items:
+      - 'configmap'
+      - 'service'

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fabric-tcp-services
+  namespace: {{ theconfigmap.resources[0].metadata.namespace }}
+  resourceVersion: '{{ theconfigmap.resources[0].metadata.resourceVersion }}'
+data:
+{% for aport in toberemoved %}
+  {{ aport.key|int }}:
+  $patch: delete
+{%  endfor %}

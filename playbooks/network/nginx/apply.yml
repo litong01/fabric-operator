@@ -1,0 +1,120 @@
+# This module takes a list of ports which means the target
+# For example:
+#    [7054] for exposing CA node
+#    [7050, 7080] for exposing orderer node ports
+#    [7051] for exposing peer node
+# The list variable name must be TARGET_PORTS
+
+- name: Check if the target ports have been defined
+  fail:
+    msg: 'No target ports passed in, fail the task'
+  when: (TARGET_PORTS is undefined) or (TARGET_PORTS|length) == 0
+
+- name: Search for all nginx ingress services
+  community.kubernetes.k8s_info:
+    kind: Service
+    label_selectors:
+    - app.kubernetes.io/component = controller
+    - app.kubernetes.io/instance = ingress-nginx
+  register: nginx_services
+
+- name: Fail the process if some how the service no longer exists
+  when: nginx_services.resources|length == 0
+  fail:
+    msg: "Nginx service was lost, please make sure that the nginx ingress service is running"
+
+- name: Get the controller service
+  set_fact:
+    nginx_svc: '{{ item }}'
+  when: item.spec.type == 'LoadBalancer'
+  with_items: '{{ nginx_services.resources }}'
+
+- name: Search for nginx ingress controller deployment
+  community.kubernetes.k8s_info:
+    kind: 'Deployment'
+    label_selectors:
+    - app.kubernetes.io/component = controller
+    - app.kubernetes.io/instance = ingress-nginx
+  register: nginx_dep
+
+- name: Fail the task if nginx deployment cannot be found
+  fail:
+    msg: 'Nginx ingress controller deployment cannot be found, make sure that nginx controller is running.'
+  when: nginx_dep.resources|length == 0
+
+- name: Get all the used and usable ports
+  set_fact:
+    used_ports: "{{ nginx_svc.spec.ports | map(attribute='port') | list | map('string') | list }}"
+    all_ports: "{{ lookup('sequence', 'start=31000 end=32000', wantlist=True) }}"
+
+- name: Find available ports
+  set_fact:
+    usable_port: "{{ (all_ports | difference(used_ports)) }}"
+
+- name: Allocate new ports
+  set_fact:
+    EXT_PORTS: "{{ usable_port[0:(TARGET_PORTS|length)] }}"
+
+- name: Check the config map for nginx tcp services
+  community.kubernetes.k8s_info:
+    name: 'fabric-tcp-services'
+    namespace: '{{ nginx_svc.metadata.namespace }}'
+    api_version: 'v1'
+    kind: ConfigMap
+  register: theconfigmap
+
+- name: Create configmap and update controller setting since there is none
+  when: (theconfigmap.resources|length) == 0
+  block:
+  - name: Create the configmap
+    community.kubernetes.k8s:
+      state: present
+      definition: "{{ lookup('template', 'templates/configmap_new.j2')|from_yaml }}"
+
+  - name: Modify the deployment to use fabric tcp configmap
+    community.kubernetes.k8s:
+      merge_type: strategic-merge
+      definition: "{{ lookup('template', 'templates/deployment_def.j2')|from_yaml }}"
+
+- name: Update the configmap
+  when: (theconfigmap.resources|length) == 1
+  block:
+  - name: Check if the fabric service has been in the configmap
+    set_fact:
+      served: "{{ theconfigmap.resources[0].data| default({}) | dict2items | flatten | map(attribute='value') | list }}"
+      newentry: '{{ ansible_operator_meta.namespace }}/{{ ansible_operator_meta.name }}:{{ TARGET_PORTS[0] }}'
+
+  - name: Add the new port to configmap if not already served
+    when: newentry not in served
+    community.kubernetes.k8s:
+      merge_type: strategic-merge
+      definition: "{{ lookup('template', 'templates/configmap_def.j2')|from_yaml }}"
+
+- name: Check the config map for nginx tcp services
+  community.kubernetes.k8s_info:
+    name: 'fabric-tcp-services'
+    namespace: '{{ nginx_svc.metadata.namespace }}'
+    api_version: 'v1'
+    kind: ConfigMap
+  register: theconfigmap
+
+- name: Get ports from configmap
+  set_fact:
+    served: '{{ theconfigmap.resources[0].data | default({}) | dict2items | flatten | list }}'
+    entryprefix: '{{ ansible_operator_meta.namespace }}/{{ ansible_operator_meta.name }}'
+
+- name: Find the ones to be added to the service
+  set_fact:
+    tobeadded: '{{ (tobeadded | default( [] )) + [item] }}'
+  when: item.value is match(entryprefix)
+  with_items: '{{ served }}'
+
+- name: Update the nginx ingress controller service
+  when: tobeadded | length > 0
+  community.kubernetes.k8s:
+    merge_type: strategic-merge
+    definition: "{{ lookup('template', 'templates/service_def.j2')|from_yaml }}"
+
+- name: Reset the EXT_PORTS
+  set_fact:
+    EXT_PORTS: "{{ tobeadded | map(attribute='key') | list }}"
