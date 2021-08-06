@@ -26,10 +26,6 @@
     cnodename: "{{ nodename | replace('.', '-') | lower }}"
     nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
 
-- name: Setup matching node cert secret name
-  set_fact:
-    nodecertsecretname:
-
 - name: Retrieve the CA node cert secret
   community.kubernetes.k8s_info:
     kind: Nodecert
