@@ -4,6 +4,3 @@ metadata:
   name: fabric-tcp-services
   namespace: '{{ nginx_svc.metadata.namespace }}'
 data:
-{% for aport in EXT_PORTS %}
-  {{ aport|string }}: '{{ ansible_operator_meta.namespace }}/{{ ansible_operator_meta.name }}:{{ TARGET_PORTS[loop.index0] }}'
-{%  endfor %}
