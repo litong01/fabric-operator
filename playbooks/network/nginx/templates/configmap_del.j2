@@ -4,7 +4,9 @@ metadata:
   name: fabric-tcp-services
   namespace: {{ theconfigmap.resources[0].metadata.namespace }}
 data:
-{% for aport in toberemoved %}
-  {{ aport.key|int }}:
-  $patch: delete
+  $patch: replace
+{% for aport in served %}
+{%   if aport.value is not match(entryprefix) %}
+  {{ aport.key }}: {{ aport.value }}
+{%   endif %}
 {%  endfor %}
