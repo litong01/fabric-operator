@@ -16,7 +16,6 @@
 
 # Search for Istio
 - name: Search for all istio ingress gateway services
-  when: should_continue == True
   community.kubernetes.k8s_info:
     kind: Service
     label_selectors:
@@ -51,25 +50,25 @@
   - set_fact:
       should_continue: False
 
-- name: Search for nginx ingress controller services
+- name: Checking for nginx ingress controller services when no istio was found
   when: should_continue == True
-  community.kubernetes.k8s_info:
-    kind: Service
-    label_selectors:
-    - app.kubernetes.io/component = controller
-    - app.kubernetes.io/instance = ingress-nginx
-  register: nginx_services
-
-- name: Get the controller service 
-  set_fact:
-    nginx_svc: '{{ item }}'
-  when: item.spec.type == 'LoadBalancer'
-  with_items: '{{ nginx_services.resources }}'
-
-- name: Get nginx info when there is nginx controller
-  when: nginx_svc is defined and should_continue == True
   block:
-  - name: Set up variables
+  - name: Getting nginx services
+    community.kubernetes.k8s_info:
+      kind: Service
+      label_selectors:
+      - app.kubernetes.io/component = controller
+      - app.kubernetes.io/instance = ingress-nginx
+    register: nginx_services
+
+  - name: Get the controller service 
+    set_fact:
+      nginx_svc: '{{ item }}'
+    when: item.spec.type == 'LoadBalancer'
+    with_items: '{{ nginx_services.resources }}'
+
+  - name: Get nginx info when there is nginx controller
+    when: nginx_svc is defined
     set_fact:
       NODE_HOSTNAME: "{{ nginx_svc.status.loadBalancer.ingress[0].hostname | default('') }}"
       NODE_IP: "{{ nginx_svc.status.loadBalancer.ingress[0].ip | default('') }}"
@@ -83,7 +82,7 @@
     msg: 'NODE_HOSTNAME: {{ NODE_HOSTNAME }}  NODE_IP: {{ NODE_IP }}  LB_TYPE: {{ LB_TYPE }}'
 
 # When we reach this point, that means there is no way to expose the endpoint
-- name: Fail if no way to expose endpoints
+- name: Fail if there is no means to expose endpoints
   when: should_continue == True
   fail:
     msg: |
