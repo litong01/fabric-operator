@@ -3,13 +3,12 @@ kind: Service
 metadata:
   name: {{ nginx_svc.metadata.name }}
   namespace: {{ nginx_svc.metadata.namespace }}
-  resourceVersion: '{{ nginx_svc.metadata.resourceVersion }}'
 spec:
   ports:
 {% for aport in toberemoved %}
   - name: tcp{{ aport.key }}
-    port: {{ aport.key }}
+    port: {{ aport.key|int }}
     protocol: TCP
-    targetPort: {{ aport.key }}
+    targetPort: {{ aport.key|int }}
     $patch: delete
 {%  endfor %}

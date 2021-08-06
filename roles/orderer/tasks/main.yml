@@ -197,7 +197,7 @@
 # outside of the k8s cluster
 - name: Setup target ports
   set_fact:
-    TARGET_PORTS: '{{ [7050, 7058] }}'
+    TARGET_PORTS: '{{ [7050, 7080] }}'
     EXT_PORTS: '{{ [] }}'
 
 # The module included here will expose the target ports to outside of k8s cluster and

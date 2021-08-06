@@ -8,7 +8,7 @@ spec:
   ports:
 {% for aport in tobeadded %}
   - name: tcp{{ aport.key }}
-    port: {{ aport.key }}
+    port: {{ aport.key|int }}
     protocol: TCP
-    targetPort: {{ aport.key }}
+    targetPort: {{ aport.key|int }}
 {%  endfor %}
