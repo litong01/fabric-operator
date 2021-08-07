@@ -40,10 +40,6 @@
     msg: 'Cannot find the orderer node {{ initialOrdererNode }} certificates.'
   when: (nodecert_secret.resources|length) == 0
 
-- name: Place the certs in the right place
-  debug:
-    var: workdir
-
 - name: Get certs directory set up
   file:
     path: '{{ workdir }}/{{ orgid }}/{{ item }}'

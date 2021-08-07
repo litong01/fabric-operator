@@ -5,18 +5,6 @@
 - name: Get NODE_HOSTNAME or NODE_IP info
   include_tasks: "{{ role_path }}/../../playbooks/network/get-hostname.yml"
 
-- name: Search for the ca node
-  community.kubernetes.k8s_info:
-    kind: CA
-    api_version: operator.fabric.hyperledger.org/v1alpha1
-    name: '{{ ansible_operator_meta.name }}'
-    namespace: '{{ ansible_operator_meta.namespace }}'
-  register: ca_operator
-
-- name: Check if this will be a new operator or an update
-  set_fact:
-    new_node: "{{ ((ca_operator.resources | length) == 0)| ternary('true', 'false') }}"
-
 - name: Setup node name
   set_fact:
     nodename: "{{ ansible_operator_meta.name }}.{{ organization }}"

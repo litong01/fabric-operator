@@ -5,18 +5,6 @@
 - name: Get NODE_HOSTNAME or NODE_IP info
   include_tasks: "{{ role_path }}/../../playbooks/network/get-hostname.yml"
 
-- name: Search for the Orderer node
-  community.kubernetes.k8s_info:
-    kind: Orderer
-    api_version: operator.fabric.hyperledger.org/v1alpha1
-    name: '{{ ansible_operator_meta.name }}'
-    namespace: '{{ ansible_operator_meta.namespace }}'
-  register: thenode
-
-- name: Check if this will be a new node or update
-  set_fact:
-    new_node: "{{ ((thenode.resources | length) == 0)| ternary('true', 'false') }}"
-
 - name: Get the home directory and setup node name
   set_fact:
     workdir: "{{ lookup('env','HOME') }}/vars"
