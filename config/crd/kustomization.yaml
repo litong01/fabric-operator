@@ -8,4 +8,5 @@ resources:
 - bases/operator.fabric.hyperledger.org_nodecerts.yaml
 - bases/operator.fabric.hyperledger.org_agents.yaml
 - bases/operator.fabric.hyperledger.org_chaincodes.yaml
+- bases/operator.fabric.hyperledger.org_consoles.yaml
 #+kubebuilder:scaffold:crdkustomizeresource

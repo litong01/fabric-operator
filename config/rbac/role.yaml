@@ -161,4 +161,21 @@ rules:
       - patch
       - update
       - watch
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Console
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - consoles
+      - consoles/status
+      - consoles/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
 #+kubebuilder:scaffold:rules

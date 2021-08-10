@@ -33,4 +33,8 @@
   group: operator.fabric.hyperledger.org
   kind: Chaincode
   role: chaincode
+- version: v1alpha1
+  group: operator.fabric.hyperledger.org
+  kind: Console
+  role: console
 #+kubebuilder:scaffold:watch
