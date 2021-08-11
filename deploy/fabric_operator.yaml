@@ -672,7 +672,7 @@ spec:
           value: "1"
         - name: MAX_CONCURRENT_RECONCILES_CONSOLE_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "1"
-        image: controller:latest
+        image: email4tong/fabricop:v1.0.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
