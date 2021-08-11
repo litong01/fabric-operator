@@ -35,7 +35,7 @@
     type: ECC
 
 - name: Process CA
-  when: partytype == 'ca'
+  when: partytype in ['ca', 'console']
   block:
   - name: Generate CSR
     community.crypto.openssl_csr:
@@ -68,7 +68,7 @@
       provider: selfsigned
 
 - name: Process other request
-  when: partytype != 'ca'
+  when: partytype not in ['ca', 'console']
   block:
   - name: Generate CSRs
     when: partytype != 'ca'

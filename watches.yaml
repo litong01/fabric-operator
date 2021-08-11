@@ -37,4 +37,7 @@
   group: operator.fabric.hyperledger.org
   kind: Console
   role: console
+  finalizer:
+    name: operator.fabric.hyperledger.org/finalizer
+    playbook: playbooks/network/destroy-port.yml
 #+kubebuilder:scaffold:watch

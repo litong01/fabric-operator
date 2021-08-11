@@ -1,2 +1,36 @@
 ---
 # defaults file for Console
+# organization name of the Order node. Should be a dns like string
+# this is a required attribute, if it is empty, the error will occur
+organization:
+
+# Certificate for the Console node will be saved as k8s secret. The name
+# of the secret is configurable, this is to allow users to use
+# their own certificate. If the secret name is left empty, then
+# this operator will automatically generate self signed certificates
+# based on the given organization name and name of the ca node. The name
+# of the secret will be the concatnation of the ca node name
+# organization name and word nodecert. For example, if the ca node name is ca1
+# organization name is example.com, then the ca secret name will be
+# ca1-example-com-nodecert. Basically a new Nodecert resource will be
+# created which will in turn create the secret. The generated cert,
+# private key and tls cert, key will be saved in the secret in the following format
+# 
+# For Console node
+# data:
+#   tls-cert.pem:
+#   tls-key.pem:
+#   adminid: "admin"
+#   adminpw:
+nodeCert:
+
+# ca node fabric release, the valid number must match available fabric ca
+# releases which is available as tag on each hyperledger/fabric-ca.
+# These tags can be found by search docker hub.
+release: 2.4
+
+# ca node storage size, this has to be valid kubernetes storage size
+storage: 5Gi
+
+# ca node logging level.
+logLevel: ERROR

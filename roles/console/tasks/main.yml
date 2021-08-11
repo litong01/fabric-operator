@@ -1,2 +1,192 @@
 ---
-# tasks file for Console
+# tasks file for Peer
+- name: Validate configurations
+  include_tasks: "validation.yml"
+
+- name: Get NODE_HOSTNAME or NODE_IP info
+  include_tasks: "{{ role_path }}/../../playbooks/network/get-hostname.yml"
+
+# When we reach this point, we know that Peer node is most likely up
+# running, now expose the node endpoint
+# The following tasks are all for exposing the node endpoint to
+# outside of the k8s cluster
+- name: Setup target ports
+  set_fact:
+    TARGET_PORTS: '{{ [3000] }}'
+    EXT_PORTS: '{{ [] }}'
+
+# We need to figure out the external port first since the console
+# need to use that piece of information from user interface
+- name: Now expose console service to outside of the k8s cluster
+  include_tasks: '{{ role_path }}/../../playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
+
+- name: Check if the ports exposed correctly
+  fail:
+    msg: 'The ports were not exposed correctly, fail the task'
+  when: (EXT_PORTS|length) != (TARGET_PORTS|length)
+
+- name: Get the home directory and setup node name
+  set_fact:
+    workdir: "{{ lookup('env','HOME') }}/vars"
+    nodename: "{{ ansible_operator_meta.name }}.{{ organization }}"
+
+- name: setup canonical name and node cert name for the node
+  set_fact:
+    cnodename: "{{ nodename | replace('.', '-') | lower }}"
+    nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
+    dbpw: "{{ lookup('community.general.random_string', length=12, special=false) | b64encode }}"
+
+- name: Setup node cert secret name
+  set_fact:
+    nodecertsecretname: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+
+- name: Retrieve the node cert
+  community.kubernetes.k8s_info:
+    kind: Nodecert
+    api_version: v1
+    name: '{{ nodecertname }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: nodecert
+
+- name: Generate node cert when there is none
+  when: nodecert.resources | length == 0
+  community.kubernetes.k8s:
+    definition:
+      kind: Nodecert
+      apiVersion: operator.fabric.hyperledger.org/v1alpha1
+      metadata:
+        name: '{{ nodecertname }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        organization: "{{ organization }}"
+        nodeType: Console
+
+- name: Retrieve the node cert
+  community.kubernetes.k8s_info:
+    kind: Nodecert
+    api_version: v1
+    name: "{{ nodecertname }}"
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    wait: yes
+    wait_condition:
+      type: Running
+      status: "True"
+    wait_sleep: 3
+    wait_timeout: 120
+
+- name: start console node service
+  community.kubernetes.k8s:
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        labels:
+          k8s-app: '{{ cnodename }}'
+        name: '{{ ansible_operator_meta.name }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          k8s-app: '{{ cnodename }}'
+        ports:
+        - name: consoleport
+          port: 3000
+          targetPort: 3000
+
+- name: start console node
+  community.kubernetes.k8s:
+    definition:
+      kind: StatefulSet
+      apiVersion: apps/v1
+      metadata:
+        name: '{{ ansible_operator_meta.name }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          matchLabels:
+            k8s-app: '{{ cnodename }}'
+            hlf-type: console
+            hlf-dn: '{{ organization }}'
+            hlf-mspid: '{{ cnodename }}'
+        serviceName: '{{ ansible_operator_meta.name }}'
+        replicas: 1
+        volumeClaimTemplates:
+        - metadata:
+            name: '{{ cnodename }}-data'
+          spec:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: "{{ storage }}"
+        template:
+          metadata:
+            labels:
+              k8s-app: '{{ cnodename }}'
+              hlf-type: console
+              hlf-dn: '{{ organization }}'
+              hlf-mspid: '{{ cnodename }}'
+          spec:
+            volumes:
+            - name: nodetlscert
+              projected:
+                sources:
+                - secret:
+                    name: "{{ nodecertsecretname }}"
+                    items:
+                    - key: tls-cert.pem
+                      path: "tls-cert.pem"
+                    - key: tls-key.pem
+                      path: "tls-key.pem"
+                    - key: config.yaml
+                      path: "config.yaml"
+            containers:
+            - name: couchdb
+              image: couchdb:3.1.1
+              imagePullPolicy: IfNotPresent
+              env:
+              - { name: "COUCHDB_USER",     value: "admin" }
+              - { name: "COUCHDB_PASSWORD", value: "adminpw" }
+              volumeMounts:
+              - { mountPath: "/opt/couchdb/data", name: "{{ cnodename }}-data" }
+            - name: configtxlator
+              image: 'hyperledger/fabric-tools:{{ release }}'
+              imagePullPolicy: Always
+              command: ['/usr/local/bin/configtxlator']
+              args: ["start", "--CORS=*"]
+            - name: console
+              image: 'ghcr.io/hyperledger-labs/fabric-console:latest'
+              imagePullPolicy: IfNotPresent
+              env:
+              - name: INITIAL_ADMIN
+                valueFrom:
+                  secretKeyRef:
+                    name: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+                    key: adminid
+              - name: DEFAULT_USER_PASSWORD_INITIAL
+                valueFrom:
+                  secretKeyRef:
+                    name: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
+                    key: adminpw
+              - { name: "CONFIGURE_FILE", value: "./env/config.yaml" }
+              - { name: "VERSION", value: "v1.0" }
+              - { name: "APP_PORT", value: "3000" }
+              - { name: "AUTH_SCHEME", value: "couchdb" }
+              - { name: "CONFIGTXLATOR_URL_ORIGINAL", value: "http://localhost:7059" }
+              - { name: "MAX_REQ_PER_MIN", value: "200" }
+              - { name: "DB_SYSTEM", value: "athena_system" }
+              - { name: "PEM_FILE_PATH", value: "/home/athena/env/tls-cert.pem" }
+              - { name: "KEY_FILE_PATH", value: "/home/athena/env/tls-key.pem" }
+              - { name: "DB_CONNECTION_STRING", value: "http://admin:adminpw@localhost:5984" }
+              - { name: "HOST_URL", value: "https://{{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}" }
+              volumeMounts:
+              - { mountPath: "/home/athena/env", name: "nodetlscert" }
+
+- name: Update the crd status
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: Console
+    name: "{{ ansible_operator_meta.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+    status:
+      endpoint: >-
+        {{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}

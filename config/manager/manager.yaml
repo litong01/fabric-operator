@@ -44,6 +44,8 @@ spec:
           value: "0"
         - name: ANSIBLE_VERBOSITY_AGENT_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "0"
+        - name: ANSIBLE_VERBOSITY_CONSOLE_OPERATOR_FABRIC_HYPERLEDGER_ORG
+          value: "0"
         - name: MAX_CONCURRENT_RECONCILES_CA_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "1"
         - name: MAX_CONCURRENT_RECONCILES_ORDERER_OPERATOR_FABRIC_HYPERLEDGER_ORG
@@ -53,6 +55,8 @@ spec:
         - name: MAX_CONCURRENT_RECONCILES_NODECERT_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "1"
         - name: MAX_CONCURRENT_RECONCILES_AGENT_OPERATOR_FABRIC_HYPERLEDGER_ORG
+          value: "1"
+        - name: MAX_CONCURRENT_RECONCILES_CONSOLE_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "1"
         securityContext:
           allowPrivilegeEscalation: false

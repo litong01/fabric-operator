@@ -4,4 +4,8 @@ metadata:
   name: console-sample
 spec:
   # Add fields here
-  foo: bar
+  organization: example.com
+  nodeCert:
+  release: 2.3.2
+  storage: 1Gi
+  logLevel: ERROR
