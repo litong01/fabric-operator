@@ -190,4 +190,4 @@
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
       endpoint: >-
-        {{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}
+        https://{{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}

@@ -73,6 +73,33 @@
         - name: adminport
           port: 7080
           targetPort: 7080
+        - name: grpcproxy
+          port: 8443
+          targetPort: 8443
+        - name: operationport
+          port: 7060
+          targetPort: 7060
+
+# The following tasks are all for exposing the node endpoint to
+# outside of the k8s cluster
+- name: Setup target ports
+  set_fact:
+    TARGET_PORTS: '{{ [7050, 7080, 8445, 7060] }}'
+    EXT_PORTS: '{{ [] }}'
+
+# The module included here will expose the target ports to outside of k8s cluster and
+# will return a list of ports for the target ports
+- name: Now expose Orderer service to outside of the k8s cluster
+  include_tasks: '{{ role_path }}/../../playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
+
+- name: Check if the ports exposed correctly
+  fail:
+    msg: 'The ports were not exposed correctly, fail the task'
+  when: (EXT_PORTS|length) != (TARGET_PORTS|length)
+
+- name: Setup reference name
+  set_fact:
+    iporhost: "{{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}"
 
 - name: start orderer node
   community.kubernetes.k8s:
@@ -136,6 +163,23 @@
                     - key: tls.crt
                       path: "server.crt"
             containers:
+            - name: grpcproxy
+              image: ghcr.io/hyperledger-labs/grpc-web:latest
+              env:
+              - { name: "LICENSE", value: "accept" }
+              - { name: "BACKEND_ADDRESS", value: "{{ iporhost }}:{{ EXT_PORTS[0] }}" }
+              - { name: "SERVER_TLS_CERT_FILE", value: "/certs/tls/server.crt" }
+              - { name: "SERVER_TLS_KEY_FILE", value: "/certs/tls/server.key" }
+              - { name: "BACKEND_TLS_CA_FILES", value: "/certs/tls/ca.crt" }
+              - { name: "SERVER_BIND_ADDRESS", value: "0.0.0.0" }
+              - { name: "SERVER_HTTP_DEBUG_PORT", value: "8081" }
+              - { name: "SERVER_HTTP_TLS_PORT", value: "8445" }
+              - { name: "BACKEND_TLS", value: "true" }
+              - { name: "SERVER_HTTP_MAX_WRITE_TIMEOUT", value: "5m" }
+              - { name: "SERVER_HTTP_MAX_READ_TIMEOUT", value: "5m" }
+              - { name: "USE_WEBSOCKETS", value: "true" }
+              volumeMounts:
+              - { mountPath: "/certs/tls", name: "nodetlscert" }
             - name: fabric-orderer
               image: 'hyperledger/fabric-orderer:{{ release }}'
               imagePullPolicy: IfNotPresent
@@ -171,32 +215,13 @@
                   value: "[/var/hyperledger/orderer/tls/ca.crt]" }
               - { name: "ORDERER_CHANNELPARTICIPATION_ENABLED", value: "true" }
               - { name: "ORDERER_GENERAL_FILELEDGER_LOCATION", value: "/var/hyperledger/production" }
+              - { name: "CORE_OPERATIONS_LISTENADDRESS",      value: "0.0.0.0:7060" }
+              - { name: "CORE_OPERATIONS_TLS_ENABLED",        value: "false" }
               volumeMounts:
               - { mountPath: "/var/hyperledger/orderer/msp", name: "nodecert" }
               - { mountPath: "/var/hyperledger/orderer/tls", name: "nodetlscert" }
               - { mountPath: "/var/hyperledger/production", name: "{{ cnodename }}-data" }
               command: ['orderer']
-
-
-# When we reach this point, we know that Orderer node is most likely up
-# running, now expose the node endpoint
-
-# The following tasks are all for exposing the node endpoint to
-# outside of the k8s cluster
-- name: Setup target ports
-  set_fact:
-    TARGET_PORTS: '{{ [7050, 7080] }}'
-    EXT_PORTS: '{{ [] }}'
-
-# The module included here will expose the target ports to outside of k8s cluster and
-# will return a list of ports for the target ports
-- name: Now expose Orderer service to outside of the k8s cluster
-  include_tasks: '{{ role_path }}/../../playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
-
-- name: Check if the ports exposed correctly
-  fail:
-    msg: 'The ports were not exposed correctly, fail the task'
-  when: (EXT_PORTS|length) != (TARGET_PORTS|length)
 
 - name: Update the crd status
   operator_sdk.util.k8s_status:
@@ -205,7 +230,7 @@
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
-      endpoint: >-
-        {{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}
-      adminendpoint: >-
-        {{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[1] }}
+      endpoint: 'grpcs://{{ iporhost }}:{{ EXT_PORTS[0] }}'
+      adminendpoint: '{{ iporhost }}:{{ EXT_PORTS[1] }}'
+      grpcproxy: 'https://{{ iporhost }}:{{ EXT_PORTS[2] }}'
+      operations: 'http://{{ iporhost }}:{{ EXT_PORTS[3] }}'
