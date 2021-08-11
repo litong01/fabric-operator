@@ -168,6 +168,7 @@
                     name: "{{ nodecertname }}-{{ organization|replace('.','-') }}-nodecert"
                     key: adminpw
               - { name: "CONFIGURE_FILE", value: "./env/config.yaml" }
+              - { name: "APP_PORT", value: "3000" }
               - { name: "VERSION", value: "v1.0" }
               - { name: "APP_PORT", value: "3000" }
               - { name: "AUTH_SCHEME", value: "couchdb" }

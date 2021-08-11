@@ -18,6 +18,7 @@
     nodeconfig: |
       version: v1.0
       app_port: 3000
+      initial_admin: admin
       auth_scheme: couchdb
       configtxlator_url_original: http://localhost:7059
       max_req_per_min: 200
@@ -38,5 +39,5 @@
         tls-cert.pem: "{{ lookup('file', certdir+'/'+parties[0].id+'-cert.pem', errors='ignore') | b64encode }}"
         tls-key.pem: "{{ lookup('file', certdir+'/'+parties[0].id+'-key.pem', errors='ignore') | b64encode }}"
         adminid: "{{ 'admin' | b64encode }}"
-        adminpw: "{{ lookup('community.general.random_string', length=12, special=false) | b64encode }}"
+        adminpw: "{{ 'password' | b64encode }}"
         config.yaml: "{{ nodeconfig | b64encode }}"
