@@ -1,0 +1,11 @@
+{
+  "display_name": "{{ anode.metadata.name }}.{{ anode.spec.organization }}",
+  "api_url": "{{ anode.status.endpoint }}",
+  "operations_url": "{{ anode.status.operations }}",
+  "ca_url": "{{ anode.status.endpoint }}",
+  "type": "fabric-ca",
+  "ca_name": "{{ anode.metadata.name }}",
+  "tlsca_name": "{{ anode.metadata.name }}",
+  "tls_cert": "{{ thesecret.resources[0].data['tls-cert.pem'] }}",
+  "name": "{{ anode.metadata.name }}.{{ anode.spec.organization }}"
+}

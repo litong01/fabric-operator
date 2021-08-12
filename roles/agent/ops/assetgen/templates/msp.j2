@@ -1,0 +1,33 @@
+{
+  "display_name": "{{ anode.spec.organization }} MSP",
+  "msp_id": "{{ anode.spec.organization|replace('.', '-') }}",
+  "name": "{{ anode.spec.organization }} MSP",
+  "type": "msp",
+  "admins": [],
+  "root_certs": [
+    "{{ thesecret.resources[0].data['ca-cert.pem'] }}"
+  ],
+  "tls_root_certs": [
+    "{{ thesecret.resources[0].data['tls-cert.pem'] }}"
+  ],
+  "fabric_node_ous": {
+    "admin_ou_identifier": {
+      "certificate": "{{ thesecret.resources[0].data['ca-cert.pem'] }}",
+      "organizational_unit_identifier": "admin"
+    },
+    "client_ou_identifier": {
+      "certificate": "{{ thesecret.resources[0].data['ca-cert.pem'] }}",
+      "organizational_unit_identifier": "client"
+    },
+    "enable": true,
+    "orderer_ou_identifier": {
+      "certificate": "{{ thesecret.resources[0].data['ca-cert.pem'] }}",
+      "organizational_unit_identifier": "orderer"
+    },
+    "peer_ou_identifier": {
+      "certificate": "{{ thesecret.resources[0].data['ca-cert.pem'] }}",
+      "organizational_unit_identifier": "peer"
+    }
+  },
+  "host_url": "https://localhost:3002"
+}

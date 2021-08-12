@@ -65,6 +65,9 @@
         - name: caport
           port: 7054
           targetPort: 7054
+        - name: operationport
+          port: 7055
+          targetPort: 7055
 
 - name: start ca node
   community.kubernetes.k8s:
@@ -118,6 +121,10 @@
               - { name: "FABRIC_CA_SERVER_TLS_ENABLED", value: "true" }
               - { name: "FABRIC_CA_SERVER_TLS_KEYFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-key.pem" }
               - { name: "FABRIC_CA_SERVER_TLS_CERTFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-cert.pem" }
+              - { name: "FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS", value: "127.0.0.1:7055" }
+              - { name: "FABRIC_CA_SERVER_OPERATIONS_TLS_ENABLED", value: "false" }
+              - { name: "FABRIC_CA_SERVER_CFG_IDENTITIES_ALLOWREMOVE", value: "true" }
+              - { name: "FABRIC_CA_SERVER_CFG_AFFILIATIONS_ALLOWREMOVE", value: "true" }
               - name: CA_USERNAME
                 valueFrom:
                   secretKeyRef:
@@ -141,7 +148,7 @@
 # outside of the k8s cluster
 - name: Setup target ports
   set_fact:
-    TARGET_PORTS: '{{ [7054] }}'
+    TARGET_PORTS: '{{ [7054, 7055] }}'
     EXT_PORTS: '{{ [] }}'
 
 # The module included here will expose the target ports to outside of k8s cluster and
@@ -162,4 +169,6 @@
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
       endpoint: >-
-        {{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}
+        https://{{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[0] }}
+      operations: >-
+        http://{{ (NODE_HOSTNAME=='')|ternary(NODE_IP, NODE_HOSTNAME) }}:{{ EXT_PORTS[1] }}

@@ -1,0 +1,31 @@
+
+# passed in is the resource type named restype which must be CA, Console, Peer or Orderer
+
+- name: Search for the orderer matching node cert secret
+  community.kubernetes.k8s_info:
+    api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+    kind: "{{ restype }}"
+  register: crs
+
+# We need to further filter out the resources using organization
+# which k8s_info unfortnately does not do the filtering work.
+- name: Initialize the resource
+  set_fact:
+    res: []
+
+- name: Filter out the ones not in the namespace
+  set_fact:
+    res: "{{ res + [item] }}"
+  when: item.metadata.namespace == '{{ ansible_operator_meta.namespace }}'
+  with_items: "{{ crs.resources }}"
+
+- name: Generate asset file based on its type
+  include_tasks: 'gen-{{ restype | lower }}-asset.yml'
+  loop: '{{ res }}'
+  loop_control:
+    loop_var: anode
+
+- name: Now combine the filtered to the output variable
+  set_fact:
+    allcrds: >-
+      {{ allcrds | default({}) | combine({ restype: res }) }}

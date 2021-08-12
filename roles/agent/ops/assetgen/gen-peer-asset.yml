@@ -1,0 +1,31 @@
+- name: Make sure that asset target directory exists
+  file:
+    path: '{{ item }}'
+    state: 'directory'
+    mode: 0775
+  with_items:
+  - '{{ workdir }}/{{ orgid }}/assets'
+  - '{{ workdir }}/{{ orgid }}/assets/Peers'
+  - '{{ workdir }}/{{ orgid }}/assets/Wallets'
+
+- name: Setup the file name
+  set_fact:
+    assetname: "{{ anode.metadata.name }}-{{ anode.spec.organization | replace('.', '-') }}"
+
+- name: Retrieve the node cert secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: "{{ assetname }}-nodecert"
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: thesecret
+
+- name: Now generate the Peer asset for organization
+  template:
+    src: "{{ role_path }}/ops/{{ action.name }}/templates/peer.j2"
+    dest: "{{ workdir }}/{{ orgid }}/assets/Peers/{{ assetname }}.json"
+
+- name: Now generate the msp asset for organization
+  template:
+    src: "{{ role_path }}/ops/{{ action.name }}/templates/wallet.j2"
+    dest: "{{ workdir }}/{{ orgid }}/assets/Wallets/Admin-{{ assetname }}.json"

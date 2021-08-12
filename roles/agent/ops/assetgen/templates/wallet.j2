@@ -1,0 +1,6 @@
+{
+    "name": "Admin@{{ anode.metadata.name }}.{{ anode.spec.organization }}",
+    "type": "identity",
+    "private_key": "{{ thesecret.resources[0].data['admin.key'] }}",
+    "cert": "{{ thesecret.resources[0].data['admin.crt'] }}"
+}

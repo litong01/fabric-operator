@@ -1,0 +1,48 @@
+# To generate the asset file for console import
+#
+# - name: assetgen
+#   description: Generate organiztion asset for download and eventually
+#     import into console
+#   params:
+#
+# The initialOrdererNode's node secret has to be available
+# on the cluster.
+- name: Execute the action
+  include_tasks: 'getresources.yml'
+  loop: "{{ ['Console', 'CA', 'Orderer', 'Peer' ] }}"
+  loop_control:
+    loop_var: restype
+
+- name: Setup destination dir
+  set_fact:
+    targetdir: "{{ lookup('env','HOME') }}/agent/download"
+
+- name: Make sure that asset target directory exists
+  file:
+    path: '{{ targetdir }}'
+    state: '{{ item }}'
+    mode: 0775
+  with_items:
+  - 'absent'
+  - 'directory'
+
+- name: Package all the assets to one file
+  archive:
+    path: "{{ workdir }}/{{ orgid }}/assets"
+    dest: "{{ targetdir }}/{{ orgid }}-assets.zip"
+    format: zip
+
+- name: Get the pod name
+  set_fact:
+    podname: "{{ lookup('env', 'HOSTNAME') }}"
+
+- name: Update the crd status
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: Agent
+    name: "{{ ansible_operator_meta.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+    status:
+      download: >-
+        kubectl cp -n fabric-operator-system -c manager
+        {{ podname }}:{{ targetdir }}/{{ orgid }}-assets.zip .

@@ -1,0 +1,30 @@
+{
+  "display_name": "{{ anode.metadata.name }}.{{ anode.spec.organization }}",
+  "grpcwp_url": "",
+  "api_url": "{{ anode.status.endpoint }}",
+  "operations_url": "{{ anode.status.operations }}",
+  "type": "fabric-orderer",
+  "msp_id": "{{ assetname }}",
+  "system_channel_id": "systemchannel",
+  "cluster_id": "{{ anode.metadata.namespace }}",
+  "cluster_name": "{{ anode.metadata.namespace }}",
+  "name": "{{ anode.metadata.name }}.{{ anode.spec.organization }}",
+  "msp": {
+    "component": {
+      "tls_cert": "{{ thesecret.resources[0].data['tlsca.crt'] }}"
+    },
+    "ca": {
+      "root_certs": [
+        "{{ thesecret.resources[0].data['ca.crt']  }}"
+      ]
+    },
+    "tlsca": {
+      "root_certs": [
+        "{{ thesecret.resources[0].data['tlsca.crt']  }}"
+      ]
+    }
+  },
+  "pem": "{{ thesecret.resources[0].data['server.crt'] }}",
+  "tls_cert": "{{ thesecret.resources[0].data['tls.crt']  }}",
+  "tls_ca_root_cert": "{{ thesecret.resources[0].data['tlsca.crt']  }}"
+}
