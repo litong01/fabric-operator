@@ -55,7 +55,7 @@
 
 - name: Get the orderer node endpoints
   set_fact:
-    endpoint: '{{ orderernode.resources[0].status.endpoint }}'
+    endpoint: '{{ orderernode.resources[0].status.endpoint | replace("grpcs://", "") }}'
     adminendpoint: '{{ orderernode.resources[0].status.adminendpoint }}'
 
 - name: Get certs directory set up
