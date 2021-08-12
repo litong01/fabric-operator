@@ -214,15 +214,12 @@
               - { name: "CORE_PEER_LISTENADDRESS",            value: "0.0.0.0:7051" }
               - { name: "CORE_PEER_LOCALMSPID",               value: "{{ mspid }}" }
               - { name: "CORE_CHAINCODE_LOGGING_LEVEL",       value: "{{ log_level }}" }
-              - { name: "CORE_OPERATIONS_LISTENADDRESS",      value: "0.0.0.0:7061" }
-              - { name: "CORE_OPERATIONS_TLS_ENABLED",        value: "false" }
               volumeMounts:
               - { mountPath: "/var/hyperledger/fabric/msp", name: "nodecert" }
               - { mountPath: "/var/hyperledger/fabric/tls", name: "nodetlscert" }
               - { mountPath: "/var/hyperledger/production", name: "{{ cnodename }}-data" }
               command: ['/var/hyperledger/production/peer']
               args: ["node", "start"]
-
 
 - name: Update the crd status
   operator_sdk.util.k8s_status:

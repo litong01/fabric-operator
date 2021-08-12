@@ -215,8 +215,8 @@
                   value: "[/var/hyperledger/orderer/tls/ca.crt]" }
               - { name: "ORDERER_CHANNELPARTICIPATION_ENABLED", value: "true" }
               - { name: "ORDERER_GENERAL_FILELEDGER_LOCATION", value: "/var/hyperledger/production" }
-              - { name: "CORE_OPERATIONS_LISTENADDRESS",      value: "0.0.0.0:7060" }
-              - { name: "CORE_OPERATIONS_TLS_ENABLED",        value: "false" }
+              - { name: "ORDERER_OPERATIONS_LISTENADDRESS", value: "0.0.0.0:7060" }
+              - { name: "ORDERER_OPERATIONS_TLS_ENABLED", value: "false" }
               volumeMounts:
               - { mountPath: "/var/hyperledger/orderer/msp", name: "nodecert" }
               - { mountPath: "/var/hyperledger/orderer/tls", name: "nodetlscert" }
