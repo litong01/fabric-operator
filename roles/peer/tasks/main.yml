@@ -177,6 +177,10 @@
               volumeMounts:
               - { mountPath: "/var/hyperledger/production", name: "{{ cnodename }}-data" }
             containers:
+            - name: health
+              image: email4tong/pathecho:v1.0.0
+              env:
+              - { name: "PORT", value: "7061" }
             - name: grpcproxy
               image: ghcr.io/hyperledger-labs/grpc-web:latest
               env:
