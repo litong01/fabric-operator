@@ -35,6 +35,7 @@
 - name: Get the pod name
   set_fact:
     podname: "{{ lookup('env', 'HOSTNAME') }}"
+    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
 
 - name: Update the crd status
   operator_sdk.util.k8s_status:
@@ -44,5 +45,5 @@
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
       download: >-
-        kubectl cp -n fabric-operator-system -c manager
+        kubectl cp -n {{ controllerns }} -c manager
         {{ podname }}:{{ targetdir }}/{{ orgid }}-assets.zip .
