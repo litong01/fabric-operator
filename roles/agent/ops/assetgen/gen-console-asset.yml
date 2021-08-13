@@ -1,1 +1,4 @@
-# Do nothing for console
+# Simply set up host url for other part of the code to use
+- name: Get host url from the console node
+  set_fact:
+    CONSOLE_URL: "{{ anode.status.endpoint | default('https://localhost:3000') }}"
