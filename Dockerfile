@@ -14,6 +14,4 @@ COPY playbooks/ ${HOME}/playbooks/
 COPY launcher/ ${HOME}/launcher/
 COPY downloader/ ${HOME}/downloader/
 
-ENV ANSIBLE_CONFIG=${HOME}/.ansible.cfg
-COPY ansible.cfg ${HOME}/.ansible.cfg
 COPY test.yaml ${HOME}/test.yaml
