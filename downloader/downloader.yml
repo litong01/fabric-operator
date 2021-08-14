@@ -19,7 +19,23 @@
         src: '/var/hyperledger/production/bin/peer'
         dest: '/var/hyperledger/production/peer'
 
+    - name: Load the core yaml file
+      set_fact:
+        coreyaml: "{{ lookup('file', '/var/hyperledger/production/config/core.yaml') | from_yaml }}"
+        extbuilders: "{{ {'externalBuilders':[
+          {'name': 'k8schaincode', 'path': '/opt/ansible/launcher'}
+        ] } }}"
+
+    - name: Get chaincode settings together
+      set_fact:
+        chaincodesetting: "{{ coreyaml.chaincode | combine(extbuilders) }}"
+
+    - name: Add the external chaincode builder to the core
+      set_fact:
+        coreyaml: "{{ coreyaml | combine({'chaincode': chaincodesetting}) }}"
+
     - name: Copy core.yaml to right place
       copy:
-        src: '/var/hyperledger/production/config/core.yaml'
         dest: '/var/hyperledger/production/core.yaml'
+        content: >-
+          {{ coreyaml | to_nice_yaml(indent=2) }}

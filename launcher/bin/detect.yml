@@ -6,10 +6,20 @@
     - name: Show the role
       debug:
         msg: 'Running DETECT'
+
+    - name: Show metadata.json
+      set_fact:
+        cmetadata: "{{ lookup('file', CHAINCODE_METADATA_DIR + '/metadata.json') | from_json }}"
+
+    - name: Display the metadata
+      debug:
+        var: cmetadata
+
     - name: Search for the matching secret of the CA organization
       community.kubernetes.k8s_info:
         kind: Secret
       register: secret
+
     - name: Show the results
       debug:
         var: secrets

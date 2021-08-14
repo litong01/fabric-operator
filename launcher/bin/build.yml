@@ -5,7 +5,10 @@
   tasks:
     - name: Show the role
       debug:
-        msg: 'Running DETECT'
+        msg: 'Running BUILD'
+    - name: Show the parameters
+      debug:
+        msg: '{{ CHAINCODE_SOURCE_DIR }}  {{ CHAINCODE_METADATA_DIR }}  {{ BUILD_OUTPUT_DIR }}'
     - name: Search for the matching secret of the CA organization
       community.kubernetes.k8s_info:
         kind: Secret

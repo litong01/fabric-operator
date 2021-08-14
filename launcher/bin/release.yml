@@ -5,11 +5,19 @@
   tasks:
     - name: Show the role
       debug:
-        msg: 'Running DETECT'
+        msg: 'Running RELEASE'
+
     - name: Search for the matching secret of the CA organization
       community.kubernetes.k8s_info:
         kind: Secret
       register: secret
+
     - name: Show the results
       debug:
         var: secrets
+
+    - name: Create the chaincode/server directory for connection.json
+      file:
+        path: '{{ RELEASE_OUTPUT_DIR }}/chaincode/server'
+        state: 'directory'
+        mode: 0775
