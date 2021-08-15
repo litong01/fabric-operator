@@ -1,0 +1,81 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: peer-role
+  namespace: {{ ansible_operator_meta.namespace }}
+rules:
+  ##
+  ## Base operator rules
+  ##
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+      - pods
+      - pods/exec
+      - pods/log
+      - services
+      - endpoints
+      - persistentvolumeclaims
+      - events
+      - configmaps
+      - namespaces
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - statefulsets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  ##
+  ## Rules for istio resources.
+  ##
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Nodecert
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - nodecerts
+      - nodecerts/status
+      - nodecerts/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  ##
+  ## Rules for operator.fabric.hyperledger.org/v1alpha1, Kind: Chaincode
+  ##
+  - apiGroups:
+      - operator.fabric.hyperledger.org
+    resources:
+      - chaincodes
+      - chaincodes/status
+      - chaincodes/finalizers
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+#+kubebuilder:scaffold:rules

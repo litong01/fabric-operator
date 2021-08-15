@@ -20,6 +20,7 @@ rules:
       - events
       - configmaps
       - namespaces
+      - serviceaccounts
     verbs:
       - create
       - delete
@@ -43,6 +44,20 @@ rules:
       - patch
       - update
       - watch
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - roles
+      - rolebindings
+    verbs:
+      - create
+      - bind
+      - get
+      - list
+      - watch
+      - delete
+      - update
+      - patch
   ##
   ## Rules for istio resources.
   ##

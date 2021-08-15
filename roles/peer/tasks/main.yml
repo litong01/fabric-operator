@@ -3,6 +3,9 @@
 - name: Validate configurations
   include_tasks: "validation.yml"
 
+- name: Setup access control for peer node
+  include_tasks: "access.yml"
+
 - name: Get NODE_HOSTNAME or NODE_IP info
   include_tasks: "{{ role_path }}/../../playbooks/network/get-hostname.yml"
 
@@ -162,6 +165,7 @@
                       path: "server.key"
                     - key: tls.crt
                       path: "server.crt"
+            serviceAccountName: 'chaincode-manager'
             initContainers:
             - name: setup
               image: 'email4tong/fabricop:v1.0.0'

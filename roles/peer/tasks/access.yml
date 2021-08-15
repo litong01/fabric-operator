@@ -1,0 +1,14 @@
+- name: Create peer role
+  community.kubernetes.k8s:
+    state: present
+    definition: "{{ lookup('template', role_path+'/rbac/role.j2') | from_yaml }}"
+
+- name: Create service account
+  community.kubernetes.k8s:
+    state: present
+    definition: "{{ lookup('template', role_path+'/rbac/service_account.j2') | from_yaml }}"
+
+- name: Create the role binding
+  community.kubernetes.k8s:
+    state: present
+    definition: "{{ lookup('template', role_path+'/rbac/role_binding.j2') | from_yaml }}"
