@@ -5,7 +5,8 @@
 *.dll
 *.so
 *.dylib
-bin
+vendor
+bin/*
 
 # editor and IDE paraphernalia
 .idea
