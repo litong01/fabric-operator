@@ -9,14 +9,14 @@ node endpoints to outside of your Kubernetes cluster, so you will have to deploy
 ingress nginx controller or istio in your cluster. Please refer to the following two
 places for installing them into your kuberentes.
 
-[Ingress Nginx Controller](#https://kubernetes.github.io/ingress-nginx/deploy/)
+[Ingress Nginx Controller](https://kubernetes.github.io/ingress-nginx/deploy/)
 Your vendor specific k8s may require a different way to install nginx ingress
 controller, please refer to their document for installation. Here is an example:
 ```
     kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.48.1/deploy/static/provider/cloud/deploy.yaml
 ```
 
-[Istio](#https://istio.io/latest/docs/setup/)
+[Istio](https://istio.io/latest/docs/setup/)
 Example command to install istio
 ```
     istioctl install -y
