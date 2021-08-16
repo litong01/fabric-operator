@@ -38,11 +38,13 @@ jobs:
     - name: Checkout sources
       uses: actions/checkout@v2
       
-    - run: make docker-build IMG=email4tong/fabricop:v1.0.0
+    - name: Build operator controller image
+      run: make docker-build IMG=email4tong/fabricop:v1.0.0
  
-    - run: |
+    - name: Build chaincode image
+      run: |
         cd utilities/chaincode/simple
-        docker build -t email4tong/simple:v1.0.0
+        docker build -t email4tong/simple:v1.0.0 .
 
     - name: Login to DockerHub
       uses: docker/login-action@v1
