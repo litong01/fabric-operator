@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        fabric: ['2.2.3', '2.4']
+        fabric: ['2.2.3']
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -27,6 +27,40 @@ jobs:
 
       - name: 'Build Fabric operator container image'
         run: make docker-build IMG=email4tong/fabricop:v1.0.0
+
+      - name: Build chaincode image
+        run: |
+          cd utilities/chaincode/simple
+          docker build -t email4tong/simple:v1.0.0 .
+
+      - name: Get kubectl
+        uses: azure/setup-kubectl@v1
+
+      - name: Start up kind k8s cluster
+        uses: helm/kind-action@v1.2.0
+
+      - name: Deploy the nginx ingress controller
+        run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.48.1/deploy/static/provider/cloud/deploy.yaml
+
+      - name: Wait for the controller to have the external IP
+        run: |
+          while : ; do
+            ENDPOINT=$(kubectl get -n ingress-nginx service/ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress}')
+            if [[ ! -z $ENDPOINT ]]; then
+              break
+            fi
+            echo -e ${Green}Waiting${ColorOff} for Nginx Ingress Controller to be ready...
+            sleep 3
+          done
+
+      - name: Find kind command
+        run: which kind
+
+      - name: Deploy Fabric Operator Controller
+        run: kubectl apply -f deploy/fabric_operator.yaml
+
+      - name: Deploy Fabric Operator CA node
+        run: kubectl apply -f config/samples/ operator_v1alpha1_ca.yaml
 
   dockerhub:
     name: Docker
