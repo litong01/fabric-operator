@@ -25,31 +25,40 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: 'Build Fabric operator container image'
-        run: make docker-build IMG=email4tong/fabricop:v1.0.0
-
-      - name: Build chaincode image
-        run: |
-          cd utilities/chaincode/simple
-          docker build -t email4tong/simple:v1.0.0 .
-
-      - name: Get kubectl
-        uses: azure/setup-kubectl@v1
-
       - name: Start up kind k8s cluster
         uses: helm/kind-action@v1.2.0
 
+      - name: Deploy metallb
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml
+          kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/metallb.yaml
+
+      - name: Fixup metallb
+        run: |
+          PREFIX=$(docker network inspect -f '{{range .IPAM.Config }}{{ .Gateway }}{{end}}' kind | cut -d '.' -f1,2)
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            namespace: metallb-system
+            name: config
+          data:
+            config: |
+              address-pools:
+              - name: default
+                protocol: layer2
+                addresses:
+                - $PREFIX.255.230-$PREFIX.255.240
+          EOF
+
       - name: Deploy the nginx ingress controller
         run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.48.1/deploy/static/provider/cloud/deploy.yaml
-
-      - name: Find kind command
-        run: which kind
 
       - name: Wait for the controller to have the external IP
         run: |
           for ((x=0;x<30;x++)); do
             ENDPOINT=$(kubectl get -n ingress-nginx service/ingress-nginx-controller -o jsonpath='{.status.loadBalancer.ingress}')
-            echo $ENDPOINT
             if [[ ! -z $ENDPOINT ]]; then
               break
             fi
@@ -57,11 +66,25 @@ jobs:
             sleep 5
           done
 
+      - name: 'Build Fabric operator container image'
+        run: make docker-build IMG=email4tong/fabricop:v1.0.0
+
+      - name: 'Upload the container image to k8s cluster'
+        run: kind load docker-image email4tong/fabricop:v1.0.0
+
+      - name: Build chaincode image
+        run: |
+          cd utilities/chaincode/simple
+          docker build -t email4tong/simple:v1.0.0 .
+
+      - name: 'Upload the chaincode container image to k8s cluster'
+        run: kind load docker-image email4tong/simple:v1.0.0
+
       - name: Deploy Fabric Operator Controller
         run: kubectl apply -f deploy/fabric_operator.yaml
 
       - name: Deploy Fabric Operator CA node
-        run: kubectl apply -f config/samples/ operator_v1alpha1_ca.yaml
+        run: kubectl apply -f config/samples/operator_v1alpha1_ca.yaml
 
   dockerhub:
     name: Docker
