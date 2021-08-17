@@ -88,8 +88,19 @@ jobs:
       - name: Deploy Fabric Operator CA node
         run: kubectl apply -f config/samples/operator_v1alpha1_ca.yaml
 
+      - name: Wait for the CA pod to exist
+        run: |
+          for ((x=0;x<60;x++)); do
+            capod=$(kubectl get pod ca-sample-0||true)
+            if [[ ! -z $capod ]]; then
+              break
+            fi
+            echo -e ${Green}Waiting${ColorOff} for CA pod to exist...
+            sleep 5
+          done
+
       - name: Wait for CA node to be fully ready
-        run: kubectl wait --for=condition=ready --timeout=30s pod/ca-sample-0
+        run: kubectl wait --for=condition=ready --timeout=60s pod/ca-sample-0
 
   dockerhub:
     name: Docker
