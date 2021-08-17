@@ -27,6 +27,8 @@ jobs:
 
       - name: Start up kind k8s cluster
         uses: helm/kind-action@v1.2.0
+        with:
+          cluster_name: kind
 
       - name: Deploy metallb
         run: |
@@ -70,7 +72,7 @@ jobs:
         run: make docker-build IMG=email4tong/fabricop:v1.0.0
 
       - name: 'Upload the container image to k8s cluster'
-        run: kind load docker-image email4tong/fabricop:v1.0.0 --name chart-testing
+        run: kind load docker-image email4tong/fabricop:v1.0.0 --name kind
 
       - name: Build chaincode image
         run: |
@@ -78,13 +80,16 @@ jobs:
           docker build -t email4tong/simple:v1.0.0 .
 
       - name: 'Upload the chaincode container image to k8s cluster'
-        run: kind load docker-image email4tong/simple:v1.0.0 --name chart-testing
+        run: kind load docker-image email4tong/simple:v1.0.0 --name kind
 
       - name: Deploy Fabric Operator Controller
         run: kubectl apply -f deploy/fabric_operator.yaml
 
       - name: Deploy Fabric Operator CA node
         run: kubectl apply -f config/samples/operator_v1alpha1_ca.yaml
+
+      - name: Wait for CA node to be fully ready
+        run: kubectl wait --for=condition=ready --timeout=30s pod/ca-sample-0
 
   dockerhub:
     name: Docker
