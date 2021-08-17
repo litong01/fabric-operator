@@ -18,7 +18,9 @@ RUN CGO_ENABLED=0 GOARCH=amd64 GOOS=linux go build -trimpath -ldflags '-extldfla
 
 # Production ready image
 # Pass the binary to the prod image
-FROM scratch
+# To make the image even smaller, use the scratch as base image
+# FROM scratch
+FROM alpine:3.13
 
 # Add the timezone data files
 COPY --from=base /usr/share/zoneinfo /usr/share/zoneinfo

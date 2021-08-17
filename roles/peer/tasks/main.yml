@@ -206,7 +206,8 @@
               image: 'email4tong/fabricop:v1.0.0'
               imagePullPolicy: Always
               env:
-              - { name: "PEER_SERVICE_LOCAL",                 value: "{{ ansible_operator_meta.name }}.{{ ansible_operator_meta.namespace }}"}
+              - { name: "PEER_OPERATOR_NAME",                 value: "{{ ansible_operator_meta.name }}" }
+              - { name: "PEER_OPERATOR_ORG",                  value: "{{ organization }}" }
               - { name: "FABRIC_LOGGING_SPEC",                value: "{{ log_level }}" }
               - { name: "FABRIC_CFG_PATH",                    value: "/var/hyperledger/production" }
               - { name: "CORE_PEER_GOSSIP_ORGLEADER",         value: "true" }

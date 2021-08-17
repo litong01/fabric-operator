@@ -1,2 +1,59 @@
 ---
 # tasks file for Chaincode
+- name: Validate configurations
+  include_tasks: "validation.yml"
+
+- name: Set the cc name
+  set_fact:
+    ccname: '{{ ansible_operator_meta.name }}'
+
+- name: Create a k8s service for the chaincode
+  community.kubernetes.k8s:
+    definition:
+      kind: Service
+      apiVersion: v1
+      metadata:
+        labels:
+          k8s-app: '{{ ccname }}'
+          hlf-type: chaincode
+        name: '{{ ansible_operator_meta.name }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          k8s-app: '{{ ccname }}'
+          hlf-type: chaincode
+        ports:
+        - name: ccport
+          port: 7090
+          targetPort: 7090
+
+- name: Create a k8s deployment for the chaincode
+  community.kubernetes.k8s:
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: '{{ ansible_operator_meta.name }}'
+        namespace: '{{ ansible_operator_meta.namespace }}'
+      spec:
+        selector:
+          matchLabels:
+            k8s-app: '{{ ccname }}'
+            hlf-type: chaincode
+            hlf-dn: '{{ organization }}'
+        replicas: 1
+        template:
+          metadata:
+            labels:
+              k8s-app: '{{ ccname }}'
+              hlf-type: chaincode
+              hlf-dn: '{{ organization }}'
+          spec:
+            containers:
+            - name: chaincode
+              image: "{{ image }}"
+              env:
+              - { name: "CHAINCODE_CCID", value: "{{ ccid }}" }
+              - { name: "CHAINCODE_ADDRESS", value: "localhost:7090" }
+              ports:
+              - containerPort: 7090

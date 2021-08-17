@@ -206,6 +206,7 @@ func main() {
 		},
 	}
 
+	fmt.Println("Start the chaincode server...")
 	// Start the chaincode external server
 	err := server.Start()
 	if err != nil {

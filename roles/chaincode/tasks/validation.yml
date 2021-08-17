@@ -1,0 +1,14 @@
+- name: Check if the organization variable is set
+  fail:
+    msg: "organization must be provided in the request"
+  when: organization == None or (organization|trim) == ''
+
+- name: Check if the ccid is set
+  fail:
+    msg: "Chaincode id must be provided"
+  when: ccid == None or (ccid|trim) == ''
+
+- name: Check if the image is set
+  fail:
+    msg: "Chaincode image must be provided"
+  when: image == None or (image|trim) == ''
