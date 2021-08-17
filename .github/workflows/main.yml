@@ -70,7 +70,7 @@ jobs:
         run: make docker-build IMG=email4tong/fabricop:v1.0.0
 
       - name: 'Upload the container image to k8s cluster'
-        run: kind load docker-image email4tong/fabricop:v1.0.0
+        run: kind load docker-image email4tong/fabricop:v1.0.0 --name chart-testing
 
       - name: Build chaincode image
         run: |
@@ -78,7 +78,7 @@ jobs:
           docker build -t email4tong/simple:v1.0.0 .
 
       - name: 'Upload the chaincode container image to k8s cluster'
-        run: kind load docker-image email4tong/simple:v1.0.0
+        run: kind load docker-image email4tong/simple:v1.0.0 --name chart-testing
 
       - name: Deploy Fabric Operator Controller
         run: kubectl apply -f deploy/fabric_operator.yaml
