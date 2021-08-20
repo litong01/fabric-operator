@@ -32,6 +32,7 @@
   community.crypto.openssl_privatekey:
     path: "{{ certdir }}/{{ partyid }}-key.pem"
     curve: secp256r1
+    format: pkcs8
     type: ECC
 
 - name: Process CA
