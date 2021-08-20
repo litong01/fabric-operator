@@ -1,6 +1,6 @@
 {
   "display_name": "{{ anode.metadata.name }}.{{ anode.spec.organization }}",
-  "grpcwp_url": "{{ anode.status.endpoint | replace('grpcs', 'https') }}",
+  "grpcwp_url": "{{ anode.status.grpcproxy }}",
   "api_url": "{{ anode.status.endpoint }}",
   "operations_url": "{{ anode.status.operations }}",
   "type": "fabric-peer",
