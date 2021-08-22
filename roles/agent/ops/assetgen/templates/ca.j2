@@ -4,7 +4,7 @@
   "operations_url": "{{ anode.status.operations }}",
   "ca_url": "{{ anode.status.endpoint }}",
   "type": "fabric-ca",
-  "ca_name": "{{ anode.metadata.name }}",
+  "ca_name": "{{ anode.metadata.name }}.{{ anode.spec.organization }}",
   "tlsca_name": "{{ anode.metadata.name }}",
   "tls_cert": "{{ thesecret.resources[0].data['tls-cert.pem'] }}",
   "name": "{{ anode.metadata.name }}.{{ anode.spec.organization }}"
