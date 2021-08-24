@@ -36,7 +36,7 @@ IMAGE_TAG_BASE ?= fabric.hyperledger.org/fabric-operator
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= email4tong/fabricop:v1.0.0
 
 all: docker-build
 
@@ -90,6 +90,9 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 chaincode: ## Create chaincode tar.gz file
 	cd utilities/chaincode/simple && tar cfz code.tar.gz src/*
 	cd utilities/chaincode/simple && tar cfz simple.tgz metadata.json code.tar.gz
+
+dev: docker-build ## build and upload to kind created k8s cluster, for dev only
+	kind load docker-image ${IMG}
 
 OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH := $(shell uname -m | sed 's/x86_64/amd64/')
