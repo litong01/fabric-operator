@@ -121,7 +121,7 @@
               - { name: "FABRIC_CA_SERVER_TLS_ENABLED", value: "true" }
               - { name: "FABRIC_CA_SERVER_TLS_KEYFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-key.pem" }
               - { name: "FABRIC_CA_SERVER_TLS_CERTFILE", value: "/etc/hyperledger/fabric-ca/idcerts/tls-cert.pem" }
-              - { name: "FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS", value: "127.0.0.1:7055" }
+              - { name: "FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS", value: "0.0.0.0:7055" }
               - { name: "FABRIC_CA_SERVER_OPERATIONS_TLS_ENABLED", value: "false" }
               - { name: "FABRIC_CA_SERVER_CFG_IDENTITIES_ALLOWREMOVE", value: "true" }
               - { name: "FABRIC_CA_SERVER_CFG_AFFILIATIONS_ALLOWREMOVE", value: "true" }
