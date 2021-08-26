@@ -1,0 +1,101 @@
+# To import external nodes into your clusters
+#
+# - name: nodeimport
+#   description: import node access point and various certificates
+#     into this cluster
+#   params:
+#   - name: assetname
+#     value: asset.tar.gz
+#
+#  assetname is the tar gzip file name which contains all the asset files
+#  this file must be uploaded to the controller prior executing this
+#  command.
+
+- name: Show the passed in variable
+  debug:
+    var: action
+
+- name: Get variable with their names
+  set_fact:
+    assetname: >-
+      {{ (action.params | selectattr('name','equalto','assetname') | map(attribute='value') | list)[0] }}
+
+- name: Fail the process if asset name was not provided
+  fail:
+    msg: 'asset zip file name must be provided for node import'
+  when: assetname == ''
+
+- name: Setup upload dir
+  set_fact:
+    targetdir: "{{ lookup('env','HOME') }}/agent/upload"
+
+- name: Make sure that asset target directory exists
+  file:
+    path: '{{ targetdir }}'
+    state: 'directory'
+    mode: 0775
+
+- name: Get the pod name
+  set_fact:
+    podname: "{{ lookup('env', 'HOSTNAME') }}"
+    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
+
+- name: Check if the indicated file exists
+  stat:
+    path: '{{ targetdir }}/{{ assetname }}'
+  register: assetfile
+
+- name: Fail the process if file does not exist
+  when: not assetfile.stat.exists
+  block:
+  - name: Update the crd status
+    operator_sdk.util.k8s_status:
+      api_version: operator.fabric.hyperledger.org/v1alpha1
+      kind: Agent
+      name: "{{ ansible_operator_meta.name }}"
+      namespace: "{{ ansible_operator_meta.namespace }}"
+      status:
+        result: 'Failed'
+        uploadcmd: >-
+          kubectl cp {{ assetname }} -n {{ controllerns }} -c manager
+          {{ podname }}:{{ targetdir }}/{{ assetname }}
+
+  - name: Finish the play
+    meta: end_play
+
+- name: Make sure that asset unarchive directory exists
+  file:
+    path: '{{ workdir }}'
+    state: 'directory'
+    mode: 0775
+
+- name: Unpackage all the assets to the work directory
+  unarchive:
+    src: '{{ targetdir }}/{{ assetname }}'
+    dest: "{{ workdir }}"
+
+- name: Recursively find all the asset files
+  find:
+    paths: "{{ workdir }}"
+    patterns: '*.json'
+    recurse: yes
+    file_type: file
+  register: allassets
+
+- name: Process all the uploaded assets
+  include_tasks: 'doresource.yml'
+  loop: "{{ allassets.files }}"
+  loop_control:
+    loop_var: asset
+
+- name: Update the crd status
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: Agent
+    name: "{{ ansible_operator_meta.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+    status:
+      result: 'Succeeded'
+      uploadcmd: >-
+        kubectl cp assets.zip -n {{ controllerns }} -c manager
+        {{ podname }}:{{ targetdir }}/{{ assetname }}

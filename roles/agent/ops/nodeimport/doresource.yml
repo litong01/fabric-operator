@@ -1,0 +1,25 @@
+
+# passed in is the resource type named restype which must be CA, Console, Peer or Orderer
+- name: Load the file
+  set_fact:
+    theasset: "{{ lookup('file', asset.path, errors='ignore') }}"
+
+- name: Create the secret name
+  set_fact:
+    theassetsname: "{{ theasset.name|default('')|replace('.', '-') }}"
+
+- name: Save the content to a secret
+  when: theassetsname != '' and (theasset.type|lower) in ('fabric-ca', 'fabric-peer', 'fabric-orderer')
+  community.kubernetes.k8s:
+    definition:
+      kind: Secret
+      apiVersion: v1
+      metadata:
+        name: "{{ theassetsname }}-asset"
+        namespace: '{{ ansible_operator_meta.namespace }}'
+        labels:
+          fabric-node-type: "{{ theasset.type | replace('fabric-', '') | title }}"
+          fabric-node-name: "{{ theasset.name }}"
+      type: Opaque
+      data:
+        asset: "{{ theasset | to_nice_json(indent=2) | b64encode }}"
