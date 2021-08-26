@@ -5,9 +5,9 @@
 #     into this cluster
 #   params:
 #   - name: assetname
-#     value: asset.tar.gz
+#     value: assets.zip
 #
-#  assetname is the tar gzip file name which contains all the asset files
+#  assetname is the tar or zip file file name which contains all the asset files
 #  this file must be uploaded to the controller prior executing this
 #  command.
 

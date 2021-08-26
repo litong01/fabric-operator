@@ -11,4 +11,4 @@ spec:
     description: import nodes and their certificates
     params:
     - name: assetname
-      value: myasset.tar.gz
+      value: assets.zip
