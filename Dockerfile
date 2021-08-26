@@ -3,8 +3,6 @@ FROM quay.io/operator-framework/ansible-operator:v1.11.0 as BASE
 
 FROM registry.access.redhat.com/ubi8/ubi:8.4
 
-ENV GO_VERSION 1.16.4
-
 COPY Pipfile* ./
 
 ENV PIP_NO_CACHE_DIR=1 \
