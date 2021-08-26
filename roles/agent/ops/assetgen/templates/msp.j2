@@ -29,5 +29,5 @@
       "organizational_unit_identifier": "peer"
     }
   },
-  "host_url": "{{ CONSOLE_URL }}"
+  "host_url": "{{ CONSOLE_URL|default('http://localhost:3000') }}"
 }

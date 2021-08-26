@@ -29,3 +29,4 @@
   template:
     src: "{{ role_path }}/ops/{{ action.name }}/templates/wallet.j2"
     dest: "{{ workdir }}/{{ orgid }}/assets/Wallets/Admin-{{ assetname }}.json"
+  when: includewallets == True

@@ -1,15 +1,15 @@
 # To create a new channel, an action must look like this
 #
-# - name: channelcreate
-#   description: Create new channel
+# - name: channeljoin
+#   description: join a channel
 #   params:
 #   - name: channelName
 #     value: mychannel
-#   - name: initialOrdererNode
-#     value: orderer-sample
+#   - name: node
+#     value: peer-sample
 #
-# The initialOrdererNode's node secret has to be available
-# on the cluster.
+# The node parameter indicates the peer node and its secret has to
+# be available on the cluster.
 
 - name: Show the passed in variable
   debug:

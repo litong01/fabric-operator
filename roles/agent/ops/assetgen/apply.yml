@@ -4,12 +4,39 @@
 #   description: Generate organiztion asset for download and eventually
 #     import into console
 #   params:
+#   - name: assettypes
+#     value: ['ca', 'orderer', 'peer']
+#   - name: includewallets
+#     value: no
 #
-# The initialOrdererNode's node secret has to be available
-# on the cluster.
+#  assettypes indicate what resource wanting to be included in the exported file
+#  includewallets indicates if the admin wallets should also be included
+
+- name: Show the passed in variable
+  debug:
+    var: action
+
+- name: Get variable with their names
+  set_fact:
+    assettypes: >-
+      {{ action.params | selectattr('name','equalto','assettypes') | map(attribute='value') | list }}
+    includewallets: >-
+      {{ (action.params | selectattr('name','equalto','includewallets') | map(attribute='value') | list)[0] }}
+
+- name: Fail the process if asset types are not provided
+  fail:
+    msg: 'no assets to be exported'
+  when: (assettypes | length) == 0
+
+- name: Filter out the invalid items
+  set_fact:
+    alltypes: "{{ (alltypes|default([])) + [item] }}"
+  when: (item | title) in ('Ca', 'Orderer', 'Peer') 
+  with_items: "{{ assettypes }}"
+
 - name: Execute the action
   include_tasks: 'getresources.yml'
-  loop: "{{ ['Console', 'CA', 'Orderer', 'Peer' ] }}"
+  loop: "{{ ['Console'] + alltypes }}"
   loop_control:
     loop_var: restype
 
