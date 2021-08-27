@@ -1,0 +1,89 @@
+# thesecretname must be the full name, it is made up by
+# the resource name + '-' + organization name with dot(.)
+# being replaced by dash '-'
+- name: Check if name variable is set
+  when: (thesecretname|trim) == ''
+  block:
+  - name: Update the agent status
+    operator_sdk.util.k8s_status:
+      api_version: operator.fabric.hyperledger.org/v1alpha1
+      kind: Agent
+      name: "{{ ansible_operator_meta.name }}"
+      namespace: "{{ ansible_operator_meta.namespace }}"
+      status:
+        result: 'Failed'
+
+  - name: Finish the process if no imported orderer found
+    meta: end_play
+
+- name: Search for the matching node cert secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ thesecretname }}-nodecert'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: nodecert_secret
+
+- name: Search for the match actual node
+  when: (nodecert_secret.resources|length) > 0
+  block:
+  - name: Search for the orderer node
+    community.kubernetes.k8s_info:
+      kind: "{{ nodecert_secret.resources[0].metadata.labels['fabric-node-type'] }}"
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ nodecert_secret.resources[0].metadata.ownerReferences[0].name }}'
+      namespace: '{{ ansible_operator_meta.namespace }}'
+    register: realnode
+
+  - name: Update the agent status
+    when: (realnode.resources|length) == 0
+    operator_sdk.util.k8s_status:
+      api_version: operator.fabric.hyperledger.org/v1alpha1
+      kind: Agent
+      name: "{{ ansible_operator_meta.name }}"
+      namespace: "{{ ansible_operator_meta.namespace }}"
+      status:
+        result: 'Failed'
+
+  - name: Finish the process if no imported orderer found
+    when: (realnode.resources|length) == 0
+    meta: end_play
+  
+  - name: Get the node endpoint and cert
+    set_fact:
+      endpoint: "{{ realnode.resources[0].status.endpoint }}"
+      tlsca: "{{ nodecert_secret.resources[0].data['tlsca.crt'] | b64decode }}"
+
+- name: Search for the orderer matching node asset secret
+  when: (nodecert_secret.resources|length) == 0
+  block:
+  - name: Try to locate imported orderer node
+    community.kubernetes.k8s_info:
+      kind: Secret
+      api_version: v1
+      name: '{{ thesecretname }}-asset'
+      namespace: '{{ ansible_operator_meta.namespace }}'
+    register: asset_secret
+
+  - name: Update the crd status to fail
+    when: (asset_secret.resources|length) == 0
+    operator_sdk.util.k8s_status:
+      api_version: operator.fabric.hyperledger.org/v1alpha1
+      kind: Agent
+      name: "{{ ansible_operator_meta.name }}"
+      namespace: "{{ ansible_operator_meta.namespace }}"
+      status:
+        result: 'Failed'
+
+  - name: Get the imported node asset from the secret
+    set_fact:
+      assetobj: '{{ asset_secret.resources[0].data.asset | b64decode | from_json }}'
+
+  - name: Get the node endpoint and cert
+    set_fact:
+      endpoint: "{{ assetobj['api_url'] }}"
+      tlsca: "{{ assetobj['tls_ca_root_cert'] | b64decode }}"
+
+# When we reach here, we should have the following
+#    endpoint
+#    tlsca

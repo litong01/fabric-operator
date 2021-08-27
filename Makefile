@@ -56,6 +56,8 @@ all: docker-build
 help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
+
+SEQ := $(shell date +%s)
 ##@ Build
 
 run: ansible-operator ## Run against the configured Kubernetes cluster in ~/.kube/config
@@ -93,6 +95,10 @@ chaincode: ## Create chaincode tar.gz file
 
 dev: docker-build ## build and upload to kind created k8s cluster, for dev only
 	kind load docker-image ${IMG}
+
+redeploy: dev ## build and force the deployment to reload
+	kubectl patch deploy -n fabric-operator-system fabric-operator-controller-manager \
+	-p '{"spec":{"template":{"metadata":{"labels":{"redeploy":"'$(SEQ)'"}}}}}'
 
 OS := $(shell uname -s | tr '[:upper:]' '[:lower:]')
 ARCH := $(shell uname -m | sed 's/x86_64/amd64/')

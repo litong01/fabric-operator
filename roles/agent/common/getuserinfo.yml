@@ -1,0 +1,78 @@
+# This module retrieves a user's nodecert secret
+- name: Search for the matching node cert
+  community.kubernetes.k8s_info:
+    kind: Nodecert
+    api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+    name: '{{ node_cert }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: usernodecert
+
+- name: Update the agent status
+  when: (usernodecert.resources|length) == 0
+  block:
+  - name: Update agent status
+    operator_sdk.util.k8s_status:
+      api_version: operator.fabric.hyperledger.org/v1alpha1
+      kind: Agent
+      name: "{{ ansible_operator_meta.name }}"
+      namespace: "{{ ansible_operator_meta.namespace }}"
+      status:
+        result: 'Failed - no user cert found'
+
+  - name: Finish the process if no imported orderer found
+    meta: end_play
+
+- debug:
+    msg: "{{ node_cert }}-{{ orgid }}-nodecert"
+
+- name: Search for the matching secret for the nodecert
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ node_cert }}-{{ orgid }}-nodecert'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: usersecret
+
+- name: Update the agent status
+  when: (usersecret.resources|length) == 0
+  block:
+  - name: Update agent status
+    operator_sdk.util.k8s_status:
+      api_version: operator.fabric.hyperledger.org/v1alpha1
+      kind: Agent
+      name: "{{ ansible_operator_meta.name }}"
+      namespace: "{{ ansible_operator_meta.namespace }}"
+      status:
+        result: 'Failed, no secret found!'
+
+  - name: Finish the process if no secret found
+    meta: end_play
+
+# lay out these certificates
+- name: Set up user msp directory
+  file:
+    path: '{{ workdir }}/{{ orgid }}/{{ item }}'
+    state: 'directory'
+    mode: 0775
+  with_items:
+  - 'user'
+  - 'user/msp'
+  - 'user/msp/cacerts'
+  - 'user/msp/keystore'
+  - 'user/msp/signcerts'
+  - 'user/msp/tlscacerts'
+  - 'user/tls'
+
+- name: Write certs to the correct location
+  copy:
+    content: '{{ usersecret.resources[0].data[item.src]|b64decode }}'
+    dest: '{{ workdir }}/{{ orgid }}/user/{{ item.dest }}'
+  with_items:
+  - "{{ { 'src': 'ca.crt',      'dest': 'msp/cacerts/ca.pem'} }}"
+  - "{{ { 'src': 'cert',        'dest': 'msp/signcerts/user.crt'} }}"
+  - "{{ { 'src': 'key',         'dest': 'msp/keystore/prive_sk'} }}"
+  - "{{ { 'src': 'tlsca.crt',   'dest': 'msp/tlscacerts/ca.crt'} }}"
+  - "{{ { 'src': 'tlsca.crt',   'dest': 'tls/ca.crt'} }}"
+  - "{{ { 'src': 'tls.crt',     'dest': 'tls/client.crt'} }}"
+  - "{{ { 'src': 'tls.key',     'dest': 'tls/client.key'} }}"
+
