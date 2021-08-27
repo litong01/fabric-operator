@@ -1,0 +1,50 @@
+---
+- name: Search for the matching secret of the CA organization
+  community.kubernetes.k8s_info:
+    kind: Secret
+    label_selectors:
+      - 'fabric-node-type = CA'
+      - 'fabric-organization = {{ organization}}'
+  register: casecret
+
+- name: Fail the process when CA certs are not available
+  when: casecret.resources|length == 0 or casecret.resources[0].data == None
+  fail:
+    msg: "There is no CA certs found to create orderer node certificate, create CA node cert first"
+
+- name: Create the orderer node cert secret when CA certs are available
+  when: casecret.resources|length > 0 and casecret.resources[0].data != None
+  block:
+  - name: Setup the ca certs and parties
+    set_fact:
+      cadata: "{{ casecret.resources[0].data }}"
+      parties: >-
+        {{ [ { 'type': 'admin', 'cn': ansible_operator_meta.name+'@'+organization, 'tls': False, 'id': (99999999 | random | to_uuid) },
+             { 'type': 'admin', 'cn': ansible_operator_meta.name+'@'+organization, 'tls': True, 'id': (99999999 | random | to_uuid) }
+        ] }}
+
+  - name: Generate cert and key pairs for all the parties
+    include_tasks: "one-cert.yml"
+    loop: "{{ parties }}"
+    loop_control:
+      loop_var: party
+
+  - name: Create nodecert secret
+    community.kubernetes.k8s:
+      definition:
+        kind: Secret
+        apiVersion: v1
+        metadata:
+          name: '{{ nodecertsecretname }}'
+          namespace: '{{ ansible_operator_meta.namespace }}'
+          labels:
+            fabric-node-type: Admin
+            fabric-organization: '{{ organization }}'
+        type: Opaque
+        data:
+          ca.crt: "{{ cadata['ca-cert.pem'] }}"
+          tlsca.crt: "{{ cadata['tls-cert.pem'] }}"
+          key: "{{ lookup('file', certdir+'/'+parties[0].id+'-key.pem', errors='ignore') | b64encode }}"
+          cert: "{{ lookup('file', certdir+'/'+parties[0].id+'-cert.pem', errors='ignore') | b64encode }}"
+          tls.key: "{{ lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore') | b64encode }}"
+          tls.crt: "{{ lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore') | b64encode }}"

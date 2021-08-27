@@ -44,8 +44,8 @@ organization: example.com
 
 # the type of node, can be CA, Orderer, Peer or Console. If it is
 # CA or Console type, the certificate will be either self signed
-# if none exist. If the matching secret already exists, then
-# no secret will be created.
+# if none exist or if the matching secret already exists, then
+# the existing secret will be used.
 nodeType: CA
 
 # CA cert

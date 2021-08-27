@@ -1,7 +1,7 @@
 ---
 # expect to have the following parameters
 # partyid
-# party_role can be admin, p
+# party_role can be admin
 #  
 # party_type, indicate the cert is for what node
 #   party_type: admin, user, ca, peer or orderer

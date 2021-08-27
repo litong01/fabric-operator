@@ -5,8 +5,8 @@
 
 - name: Check if the node type is set and valid
   fail:
-    msg: "node type must be provided and be one of CA, Orderer or Peer in the request"
-  when: node_type == None or (node_type|trim) == '' or ((node_type|lower) not in ('ca', 'orderer', 'peer', 'console'))
+    msg: "node type must be provided and be one of CA, Orderer, Peer, Console, Admin or User in the request"
+  when: node_type == None or (node_type|trim) == '' or ((node_type|lower) not in ('ca', 'orderer', 'peer', 'console', 'admin', 'user'))
 
 - name: Set mspid and work directory
   set_fact:
