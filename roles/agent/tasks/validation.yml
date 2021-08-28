@@ -33,3 +33,13 @@
     bindir: "{{ lookup('env','HOME') }}/agent/{{ release }}"
     workdir: "{{ lookup('env','HOME') }}/agent/{{ 99999999 | random | to_uuid }}"
     orgid: "{{ organization | replace('.', '-') }}"
+
+- name: Setup action working directory
+  set_fact:
+    tactions: >-
+      {{ tactions|default([]) +
+         [ item | combine({'aworkdir':((item|to_nice_json|hash('sha256')))[:16]}) ] }}
+  with_items: "{{ actions }}"
+
+- debug:
+    var: tactions

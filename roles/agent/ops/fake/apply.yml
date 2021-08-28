@@ -1,0 +1,19 @@
+# To create a new channel, an action must look like this
+#
+# - name: channelquery
+#   description: query channel configuration
+#   params:
+#   - name: channelName
+#     value: mychannel
+#   - name: ordererNode
+#     value: orderer-sample
+#
+# The operation will look at the orderer nodecert first, if not found
+# it will try to find node asset to get endpoint and certificates.
+# either the short orderer node name or the full orderer name can be
+# used
+
+- name: Show the passed in variable
+  debug:
+    var: action
+

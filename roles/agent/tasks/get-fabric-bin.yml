@@ -1,3 +1,11 @@
+- name: Make sure that the work directory is clean
+  file:
+    path: '{{ workdir }}'
+    state: '{{ item }}'
+  with_items:
+  - absent
+  - directory
+
 - name: Make sure that working directory exists
   file:
     path: '{{ item }}'

@@ -51,7 +51,7 @@
 # lay out these certificates
 - name: Set up user msp directory
   file:
-    path: '{{ workdir }}/{{ orgid }}/{{ item }}'
+    path: '{{ agentworkdir }}/{{ item }}'
     state: 'directory'
     mode: 0775
   with_items:
@@ -66,7 +66,7 @@
 - name: Write certs to the correct location
   copy:
     content: '{{ usersecret.resources[0].data[item.src]|b64decode }}'
-    dest: '{{ workdir }}/{{ orgid }}/user/{{ item.dest }}'
+    dest: '{{ agentworkdir }}/user/{{ item.dest }}'
   with_items:
   - "{{ { 'src': 'ca.crt',      'dest': 'msp/cacerts/ca.pem'} }}"
   - "{{ { 'src': 'cert',        'dest': 'msp/signcerts/user.crt'} }}"

@@ -1,6 +1,7 @@
 # thesecretname must be the full name, it is made up by
 # the resource name + '-' + organization name with dot(.)
 # being replaced by dash '-'
+
 - name: Check if name variable is set
   when: (thesecretname|trim) == ''
   block:
@@ -87,3 +88,21 @@
 # When we reach here, we should have the following
 #    endpoint
 #    tlsca
+
+- debug:
+    var: endpoint
+
+- name: Set up node tls directory
+  file:
+    path: '{{ agentworkdir }}/{{ item }}'
+    state: 'directory'
+    mode: 0775
+  with_items:
+  - 'tls'
+
+- name: Write certs to the directory
+  copy:
+    content: '{{ item.content | b64decode }}'
+    dest: '{{ agentworkdir }}/tls/{{ item.name }}'
+  with_items:
+  - "{{ { 'name': 'tlsca.crt', 'content: tlsca } }}"

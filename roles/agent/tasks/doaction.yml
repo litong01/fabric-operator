@@ -1,0 +1,21 @@
+---
+# perform an action
+
+- name: Prepare for the action
+  set_fact:
+    agentworkdir: "{{ workdir }}/{{ action.aworkdir }}"
+
+- name: Make sure that the work directory is clean
+  file:
+    path: '{{ agentworkdir }}'
+    state: '{{ item }}'
+  with_items:
+  - absent
+  - directory
+
+- name: Execute the action
+  include_tasks: '{{ role_path }}/ops/{{ action.name }}/apply.yml'
+
+- name: Cleanup after the action
+  debug:
+    msg: 'This is after the action'

@@ -7,7 +7,7 @@
   include_tasks: 'get-fabric-bin.yml'
 
 - name: Execute the action
-  include_tasks: '{{ role_path }}/ops/{{ action.name }}/apply.yml'
-  loop: '{{ actions }}'
+  include_tasks: 'doaction.yml'
+  loop: '{{ tactions }}'
   loop_control:
     loop_var: action
