@@ -4,18 +4,9 @@
 
 - name: Check if name variable is set
   when: (thesecretname|trim) == ''
-  block:
-  - name: Update the agent status
-    operator_sdk.util.k8s_status:
-      api_version: operator.fabric.hyperledger.org/v1alpha1
-      kind: Agent
-      name: "{{ ansible_operator_meta.name }}"
-      namespace: "{{ ansible_operator_meta.namespace }}"
-      status:
-        result: 'Failed'
-
-  - name: Finish the process if no imported orderer found
-    meta: end_play
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - No secret name provided'
 
 - name: Search for the matching node cert secret
   community.kubernetes.k8s_info:
@@ -38,24 +29,16 @@
 
   - name: Update the agent status
     when: (realnode.resources|length) == 0
-    operator_sdk.util.k8s_status:
-      api_version: operator.fabric.hyperledger.org/v1alpha1
-      kind: Agent
-      name: "{{ ansible_operator_meta.name }}"
-      namespace: "{{ ansible_operator_meta.namespace }}"
-      status:
-        result: 'Failed'
-
-  - name: Finish the process if no imported orderer found
-    when: (realnode.resources|length) == 0
-    meta: end_play
+    include_tasks: '{{ role_path }}/common/endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - Node {{ nodecert_secret.resources[0].metadata.ownerReferences[0].name }} not found'
   
   - name: Get the node endpoint and cert
     set_fact:
       endpoint: "{{ realnode.resources[0].status.endpoint }}"
       tlsca: "{{ nodecert_secret.resources[0].data['tlsca.crt'] | b64decode }}"
 
-- name: Search for the orderer matching node asset secret
+- name: Search for the matching node asset secret
   when: (nodecert_secret.resources|length) == 0
   block:
   - name: Try to locate imported orderer node
@@ -68,13 +51,9 @@
 
   - name: Update the crd status to fail
     when: (asset_secret.resources|length) == 0
-    operator_sdk.util.k8s_status:
-      api_version: operator.fabric.hyperledger.org/v1alpha1
-      kind: Agent
-      name: "{{ ansible_operator_meta.name }}"
-      namespace: "{{ ansible_operator_meta.namespace }}"
-      status:
-        result: 'Failed'
+    include_tasks: '{{ role_path }}/common/endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - Secret {{ thesecretname }}-asset not found'
 
   - name: Get the imported node asset from the secret
     set_fact:
@@ -89,9 +68,6 @@
 #    endpoint
 #    tlsca
 
-- debug:
-    var: endpoint
-
 - name: Set up node tls directory
   file:
     path: '{{ agentworkdir }}/{{ item }}'
@@ -102,7 +78,7 @@
 
 - name: Write certs to the directory
   copy:
-    content: '{{ item.content | b64decode }}'
+    content: '{{ item.content }}'
     dest: '{{ agentworkdir }}/tls/{{ item.name }}'
   with_items:
-  - "{{ { 'name': 'tlsca.crt', 'content: tlsca } }}"
+  - "{{ { 'name': 'tlsca.crt', 'content': tlsca } }}"

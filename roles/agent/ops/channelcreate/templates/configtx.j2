@@ -2,7 +2,7 @@ Organizations:
   - &OrdererOrg
     Name: OrdererOrg
     ID: {{ orgid }}
-    MSPDir: {{ workdir }}/{{ orgid }}/msp
+    MSPDir: {{ agentworkdir }}/msp
     Policies:
       Readers:
         Type: Signature
@@ -66,13 +66,13 @@ Orderer: &OrdererDefaults
         Consenters:
         - Host: {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7050
           Port: 7050
-          ClientTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
-          ServerTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
+          ClientTLSCert: {{ agentworkdir }}/tls/server.crt
+          ServerTLSCert: {{ agentworkdir }}/tls/server.crt
 {% if endpoint is defined %}
         - Host: {{ endpoint }}
           Port: {{ endpoint.split(':')[1] }}
-          ClientTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
-          ServerTLSCert: {{ workdir }}/{{ orgid }}/tls/server.crt
+          ClientTLSCert: {{ agentworkdir }}/tls/server.crt
+          ServerTLSCert: {{ agentworkdir }}/tls/server.crt
 {% endif %}
 
     BatchTimeout: 2s

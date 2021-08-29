@@ -11,10 +11,6 @@
 # The initialOrdererNode's node secret has to be available
 # on the cluster.
 
-- name: Show the passed in variable
-  debug:
-    var: action
-
 - name: Get variable with their names
   set_fact:
     channelName: >-
@@ -22,10 +18,11 @@
     initialOrdererNode: >-
       {{ (action.params | selectattr('name','equalto','initialOrdererNode') | map(attribute='value') | list)[0] }}
 
-- name: Fail the process if either variable is empty
-  fail:
-    msg: 'Both channel name and initial orderer node must be provided'
+- name: End the process if either variable is empty
   when: channelName == '' or initialOrdererNode == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Both channel name and initial orderer node must be provided'
 
 - name: Search for the orderer matching node cert secret
   community.kubernetes.k8s_info:
@@ -35,10 +32,11 @@
     namespace: '{{ ansible_operator_meta.namespace }}'
   register: nodecert_secret
 
-- name: Fail the process if there is no orderer secret found
-  fail:
-    msg: 'Cannot find the orderer node {{ initialOrdererNode }} certificates.'
+- name: End the process if there is no orderer secret found
   when: (nodecert_secret.resources|length) == 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Cannot find the orderer node {{ initialOrdererNode }} certificates'
 
 - name: Search for the orderer node
   community.kubernetes.k8s_info:
@@ -48,23 +46,28 @@
     namespace: '{{ ansible_operator_meta.namespace }}'
   register: orderernode
 
-- name: Fail the process if there is no orderer node found
-  fail:
-    msg: 'Cannot find the orderer node {{ initialOrdererNode }}.'
+- name: End the process if there is no orderer node found
   when: (orderernode.resources|length) == 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Cannot find the orderer node {{ initialOrdererNode }}'
 
 - name: Get the orderer node endpoints
   set_fact:
     endpoint: '{{ orderernode.resources[0].status.endpoint | replace("grpcs://", "") }}'
     adminendpoint: '{{ orderernode.resources[0].status.adminendpoint }}'
 
+- name: Copy original config to working directory
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}'
+
 - name: Get certs directory set up
   file:
-    path: '{{ workdir }}/{{ orgid }}/{{ item }}'
+    path: '{{ agentworkdir }}/{{ item }}'
     state: 'directory'
     mode: 0775
   with_items:
-  - 'config'
   - 'msp'
   - 'msp/cacerts'
   - 'msp/tlscacerts'
@@ -73,7 +76,7 @@
 - name: Write certs to the correct location
   copy:
     content: '{{ nodecert_secret.resources[0].data[item.src]|b64decode }}'
-    dest: '{{ workdir }}/{{ orgid }}/{{ item.dest }}'
+    dest: '{{ agentworkdir }}/{{ item.dest }}'
   with_items:
   - "{{ { 'src': 'ca.crt', 'dest': 'msp/cacerts/ca.pem'} }}"
   - "{{ { 'src': 'tlsca.crt', 'dest': 'msp/tlscacerts/ca.crt'} }}"
@@ -85,24 +88,29 @@
 - name: Setup configtx file
   template:
     src: '{{ role_path }}/ops/{{ action.name }}/templates/configtx.j2'
-    dest: '{{ workdir }}/{{ orgid }}/config/configtx.yaml'
+    dest: '{{ agentworkdir }}/config/configtx.yaml'
 
 - name: 'Now create the genesis block for the channel {{ channelName }}'
   ansible.builtin.shell: |
-    export FABRIC_CFG_PATH={{ workdir }}/{{ orgid }}/config
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
     {{ bindir }}/bin/configtxgen -profile ApplicationGenesis \
     -outputBlock newc.bk -channelID {{ channelName }}
   args:
-    chdir: '{{ workdir }}/{{ orgid }}/config'
+    chdir: '{{ agentworkdir }}/config'
     executable: /bin/bash
 
 - name: 'Join the orderer node to the channel {{ channelName }}'
   ansible.builtin.shell: |
-    export FABRIC_CFG_PATH={{ workdir }}/{{ orgid }}/config
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
     {{ bindir }}/bin/osnadmin channel join --channelID {{ channelName }} \
     -o {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7080 \
     --config-block newc.bk --ca-file ../tls/ca.crt \
     --client-cert ../tls/server.crt --client-key ../tls/server.key
   args:
-    chdir: '{{ workdir }}/{{ orgid }}/config'
+    chdir: '{{ agentworkdir }}/config'
     executable: /bin/bash
+
+- name: Update the process
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded - Channel {{ channelName }} was created'

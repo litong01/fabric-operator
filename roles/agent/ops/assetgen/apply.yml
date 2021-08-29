@@ -12,10 +12,6 @@
 #  assettypes indicate what resource wanting to be included in the exported file
 #  includewallets indicates if the admin wallets should also be included
 
-- name: Show the passed in variable
-  debug:
-    var: action
-
 - name: Get variable with their names
   set_fact:
     assettypes: >-
@@ -24,9 +20,10 @@
       {{ (action.params | selectattr('name','equalto','includewallets') | map(attribute='value') | list)[0] }}
 
 - name: Fail the process if asset types are not provided
-  fail:
-    msg: 'no assets to be exported'
   when: (assettypes | length) == 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - no assets to be exported'
 
 - name: Filter out the invalid items
   set_fact:
@@ -55,7 +52,7 @@
 
 - name: Package all the assets to one file
   archive:
-    path: "{{ workdir }}/{{ orgid }}/assets"
+    path: "{{ agentworkdir }}/assets"
     dest: "{{ targetdir }}/{{ orgid }}-assets.zip"
     format: zip
 
@@ -65,12 +62,9 @@
     controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
 
 - name: Update the crd status
-  operator_sdk.util.k8s_status:
-    api_version: operator.fabric.hyperledger.org/v1alpha1
-    kind: Agent
-    name: "{{ ansible_operator_meta.name }}"
-    namespace: "{{ ansible_operator_meta.namespace }}"
-    status:
-      download: >-
-        kubectl cp -n {{ controllerns }} -c manager
-        {{ podname }}:{{ targetdir }}/{{ orgid }}-assets.zip .
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded'
+    DOWNLOAD_MSG: >-
+      kubectl cp -n {{ controllerns }} -c manager
+      {{ podname }}:{{ targetdir }}/{{ orgid }}-assets.zip

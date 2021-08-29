@@ -1,3 +1,11 @@
+- name: Make sure that binary directory exists
+  file:
+    path: '{{ item }}'
+    state: 'directory'
+    mode: 0775
+  with_items:
+  - '{{ bindir }}'
+
 - name: Make sure that the work directory is clean
   file:
     path: '{{ workdir }}'
@@ -5,15 +13,6 @@
   with_items:
   - absent
   - directory
-
-- name: Make sure that working directory exists
-  file:
-    path: '{{ item }}'
-    state: 'directory'
-    mode: 0775
-  with_items:
-  - '{{ workdir }}/{{ orgid }}'
-  - '{{ bindir }}'
 
 - name: Check if the binary already exists
   stat:
@@ -33,10 +32,10 @@
       src: '{{ bindir }}/fabricbin.tar.gz'
       dest: '{{ bindir }}'
 
-  - name: Copy config to right place
-    copy:
-      src: '{{ bindir }}/config'
-      dest: '{{ workdir }}/{{ orgid }}'
+#   - name: Copy config to right place
+#     copy:
+#       src: '{{ bindir }}/config'
+#       dest: '{{ workdir }}'
 
   - name: Remove the tar gz file since it is no longer needed
     file:

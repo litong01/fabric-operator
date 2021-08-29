@@ -20,10 +20,11 @@
     assetname: >-
       {{ (action.params | selectattr('name','equalto','assetname') | map(attribute='value') | list)[0] }}
 
-- name: Fail the process if asset name was not provided
-  fail:
-    msg: 'asset zip file name must be provided for node import'
+- name: End the process if asset name was not provided
   when: assetname == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - asset zip file name must be provided for node import'
 
 - name: Setup upload dir
   set_fact:
@@ -45,38 +46,23 @@
     path: '{{ targetdir }}/{{ assetname }}'
   register: assetfile
 
-- name: Fail the process if file does not exist
+- name: End the process if file does not exist
   when: not assetfile.stat.exists
-  block:
-  - name: Update the crd status
-    operator_sdk.util.k8s_status:
-      api_version: operator.fabric.hyperledger.org/v1alpha1
-      kind: Agent
-      name: "{{ ansible_operator_meta.name }}"
-      namespace: "{{ ansible_operator_meta.namespace }}"
-      status:
-        result: 'Failed'
-        uploadcmd: >-
-          kubectl cp {{ assetname }} -n {{ controllerns }} -c manager
-          {{ podname }}:{{ targetdir }}/{{ assetname }}
-
-  - name: Finish the play
-    meta: end_play
-
-- name: Make sure that asset unarchive directory exists
-  file:
-    path: '{{ workdir }}'
-    state: 'directory'
-    mode: 0775
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - asset zip file does not exist, upload first'
+    UPLOADLOAD_MSG: >-
+      kubectl cp {{ assetname }} -n {{ controllerns }} -c manager
+      {{ podname }}:{{ targetdir }}/{{ assetname }}
 
 - name: Unpackage all the assets to the work directory
   unarchive:
     src: '{{ targetdir }}/{{ assetname }}'
-    dest: "{{ workdir }}"
+    dest: "{{ agentworkdir }}"
 
 - name: Recursively find all the asset files
   find:
-    paths: "{{ workdir }}"
+    paths: "{{ agentworkdir }}"
     patterns: '*.json'
     recurse: yes
     file_type: file
@@ -89,13 +75,6 @@
     loop_var: asset
 
 - name: Update the crd status
-  operator_sdk.util.k8s_status:
-    api_version: operator.fabric.hyperledger.org/v1alpha1
-    kind: Agent
-    name: "{{ ansible_operator_meta.name }}"
-    namespace: "{{ ansible_operator_meta.namespace }}"
-    status:
-      result: 'Succeeded'
-      uploadcmd: >-
-        kubectl cp assets.zip -n {{ controllerns }} -c manager
-        {{ podname }}:{{ targetdir }}/{{ assetname }}
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded - Assets have been imported'

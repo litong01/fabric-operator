@@ -4,9 +4,9 @@
     state: 'directory'
     mode: 0775
   with_items:
-  - '{{ workdir }}/{{ orgid }}/assets'
-  - '{{ workdir }}/{{ orgid }}/assets/Certificate_Authorities'
-  - '{{ workdir }}/{{ orgid }}/assets/Organizations'
+  - '{{ agentworkdir }}/assets'
+  - '{{ agentworkdir }}/assets/Certificate_Authorities'
+  - '{{ agentworkdir }}/assets/Organizations'
 
 - name: Setup the file name
   set_fact:
@@ -23,9 +23,9 @@
 - name: Now generate the CA asset for organization
   template:
     src: "{{ role_path }}/ops/{{ action.name }}/templates/ca.j2"
-    dest: "{{ workdir }}/{{ orgid }}/assets/Certificate_Authorities/{{ assetname }}.json"
+    dest: "{{ agentworkdir }}/assets/Certificate_Authorities/{{ assetname }}.json"
 
 - name: Now generate the msp asset for organization
   template:
     src: "{{ role_path }}/ops/{{ action.name }}/templates/msp.j2"
-    dest: "{{ workdir }}/{{ orgid }}/assets/Organizations/{{ anode.spec.organization }}.json"
+    dest: "{{ agentworkdir }}/assets/Organizations/{{ anode.spec.organization }}.json"

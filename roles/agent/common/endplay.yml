@@ -1,0 +1,20 @@
+# This module update the agent status with 3 parameters
+#   RESULT_MSG
+#   DOWNLOAD_MSG
+#   UPLOAD_MSG
+# If DOWNLOAD_MSG or UPLOAD_MSG is not provided, empty value
+# is assume. If RESULT_MSG is not provide, Succeeded is assumed
+- name: Update agent status
+  operator_sdk.util.k8s_status:
+    api_version: operator.fabric.hyperledger.org/v1alpha1
+    kind: Agent
+    name: "{{ ansible_operator_meta.name }}"
+    namespace: "{{ ansible_operator_meta.namespace }}"
+    status:
+      result: "{{ RESULT_MSG | default('Succeeded') }}"
+      download: "{{ DOWNLOAD_MSG | default('') }}"
+      upload: "{{ UPLOADLOAD_MSG | default('') }}"
+
+- name: End the whole process if the msg is not Succeeded
+  when: RESULT_MSG is not regex('^Succeeded*')
+  meta: end_play

@@ -4,9 +4,9 @@
     state: 'directory'
     mode: 0775
   with_items:
-  - '{{ workdir }}/{{ orgid }}/assets'
-  - '{{ workdir }}/{{ orgid }}/assets/Ordering_Services'
-  - '{{ workdir }}/{{ orgid }}/assets/Wallets'
+  - '{{ agentworkdir }}/assets'
+  - '{{ agentworkdir }}/assets/Ordering_Services'
+  - '{{ agentworkdir }}/assets/Wallets'
 
 - name: Setup the file name
   set_fact:
@@ -23,10 +23,10 @@
 - name: Now generate the Orderer asset for organization
   template:
     src: "{{ role_path }}/ops/{{ action.name }}/templates/orderer.j2"
-    dest: "{{ workdir }}/{{ orgid }}/assets/Ordering_Services/{{ assetname }}.json"
+    dest: "{{ agentworkdir }}/assets/Ordering_Services/{{ assetname }}.json"
 
 - name: Now generate the msp asset for organization
   template:
     src: "{{ role_path }}/ops/{{ action.name }}/templates/wallet.j2"
-    dest: "{{ workdir }}/{{ orgid }}/assets/Wallets/Admin-{{ assetname }}.json"
+    dest: "{{ agentworkdir }}/assets/Wallets/Admin-{{ assetname }}.json"
   when: includewallets == True

@@ -24,10 +24,11 @@
     ordererNode: >-
       {{ (action.params | selectattr('name','equalto','ordererNode') | map(attribute='value') | list)[0] }}
 
-- name: Fail the process if either variable is empty
-  fail:
-    msg: 'Both channel name and initial orderer node must be provided'
+- name: End the process if either variable is empty
   when: channelName == '' or ordererNode == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Both channel name and initial orderer node must be provided'
 
 - name: Fixup the orderer name in case only the short name used
   when: not (orgid in (ordererNode|replace('.','-')))
@@ -44,15 +45,29 @@
   vars:
     thesecretname: "{{ ordererNode }}"
 
+- name: Get core yaml files
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}' 
+
 # When we reach here, we should have either the orderer node cert or
 # orderer node asset secret.
-# - name: 'Query channel {{ channelName }}'
-#   ansible.builtin.shell: |
-#     export FABRIC_CFG_PATH={{ workdir }}/{{ orgid }}/config
-#     {{ bindir }}/bin/peer channel fetch config config_block.pg \
-#     --tls -c {{ channelName }} \
-#     -o {{ endpoint }} \
-#     --cafile $ORDERER_TLS_CA
-#   args:
-#     chdir: '{{ workdir }}/{{ orgid }}/config'
-#     executable: /bin/bash
+- name: 'Query channel {{ channelName }}'
+  ansible.builtin.shell: |
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
+    export CORE_PEER_TLS_ENABLED=true
+    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/tls/tlsca.crt
+    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/user/msp
+    export CORE_PEER_ADDRESS={{ endpoint|replace('grpcs://', '') }}
+    {{ bindir }}/bin/peer channel fetch config config_block.pg \
+    --tls -c {{ channelName }} \
+    -o {{ endpoint|replace('grpcs://', '') }} \
+    --cafile {{ agentworkdir }}/tls/ca.crt
+  args:
+    chdir: '{{ agentworkdir }}'
+    executable: /bin/bash
+
+- name: Update the resource status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded'

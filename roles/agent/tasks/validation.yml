@@ -1,12 +1,8 @@
 - name: Check if the organization variable is set
-  fail:
-    msg: "organization must be provided in the request"
   when: organization == None or (organization|trim) == ''
-
-- name: Check if the agent type is set and valid
-  fail:
-    msg: "agent type must be provided and be admin or user"
-  when: type == None or (type|trim) == '' or ((type|lower) not in ('admin', 'user'))
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - organization must be provided in the request'
 
 - name: Get all the actions
   set_fact:
@@ -24,9 +20,10 @@
     supactions: "{{ availableactions_var.files | map(attribute='path') | list | map('basename') | list }}"
 
 - name: Validate all actions must be part of supported
-  fail:
-    msg: 'Action {{ allactions | difference(supactions) | join(",") }} not supported!'
   when: (allactions | difference(supactions) | length) > 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed -Action {{ allactions | difference(supactions) | join(",") }} not supported!'
 
 - name: Set work directory
   set_fact:
