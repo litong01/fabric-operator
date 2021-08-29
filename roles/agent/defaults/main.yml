@@ -4,9 +4,6 @@
 # this is a required attribute, if it is empty, the error will occur
 organization:
 
-# type of the agent, the valid values are admin, user
-type:
-
 # action performed under whose behave
 nodeCert:
 

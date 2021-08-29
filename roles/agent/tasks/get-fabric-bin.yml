@@ -32,11 +32,6 @@
       src: '{{ bindir }}/fabricbin.tar.gz'
       dest: '{{ bindir }}'
 
-#   - name: Copy config to right place
-#     copy:
-#       src: '{{ bindir }}/config'
-#       dest: '{{ workdir }}'
-
   - name: Remove the tar gz file since it is no longer needed
     file:
       path: '{{ bindir }}/fabricbin.tar.gz'

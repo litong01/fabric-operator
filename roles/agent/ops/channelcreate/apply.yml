@@ -8,8 +8,10 @@
 #   - name: initialOrdererNode
 #     value: orderer-sample
 #
-# The initialOrdererNode's node secret has to be available
-# on the cluster.
+# The initialOrdererNode node has to be running in the cluster, that means
+# the channel can only be created locally to the cluster, only the owning
+# organization of the orderer node can create the new channel.
+# Both parameters are required
 
 - name: Get variable with their names
   set_fact:
@@ -109,8 +111,12 @@
   args:
     chdir: '{{ agentworkdir }}/config'
     executable: /bin/bash
+  register: cmdresult
+  ignore_errors: yes
 
-- name: Update the process
+- name: Update the resource status
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Succeeded - Channel {{ channelName }} was created'
+    RESULT_MSG: >-
+      {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel '+channelName+' was created',
+         'Failed - '+cmdresult.stderr) }}

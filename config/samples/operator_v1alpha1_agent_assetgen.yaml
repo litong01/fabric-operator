@@ -4,8 +4,6 @@ metadata:
   name: agent-sample
 spec:
   organization: example.com
-  type: Admin
-  nodeCert:
   actions:
   - name: assetgen
     description: Generate asset file

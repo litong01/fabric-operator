@@ -4,8 +4,7 @@ metadata:
   name: agent-sample
 spec:
   organization: example.com
-  type: Admin
-  nodeCert: admin01
+  nodeCert: admin01-sample
   actions:
   - name: channelquery
     description: query channel configuration

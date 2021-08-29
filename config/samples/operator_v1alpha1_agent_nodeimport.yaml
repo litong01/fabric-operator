@@ -4,8 +4,6 @@ metadata:
   name: agent-sample
 spec:
   organization: example.com
-  type: Admin
-  nodeCert:
   actions:
   - name: nodeimport
     description: import nodes and their certificates
