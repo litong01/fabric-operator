@@ -51,12 +51,14 @@
     dest: '{{ agentworkdir }}' 
 
 # When we reach here, we should have either the orderer node cert or
-# orderer node asset secret.
+# orderer node asset secret. Here the orderer node is used as peer
+# credential (msp) contains the actual user msp information. This is
+# extremely confusing.
 - name: 'Query channel {{ channelName }}'
   ansible.builtin.shell: |
     export FABRIC_CFG_PATH={{ agentworkdir }}/config
     export CORE_PEER_TLS_ENABLED=true
-    export CORE_PEER_LOCALMSPID={{ orgid}}
+    export CORE_PEER_LOCALMSPID={{ orgid }}
     export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/tls/tlsca.crt
     export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/user/msp
     export CORE_PEER_ADDRESS={{ endpoint|replace('grpcs://', '') }}
