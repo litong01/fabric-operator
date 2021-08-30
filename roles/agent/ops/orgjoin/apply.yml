@@ -1,0 +1,33 @@
+# To create a new channel, an action must look like this
+#
+# - name: channeljoin
+#   description: join a channel
+#   parameters:  
+#     channelName: mychannel
+#     ordererNode: orderer-sample
+#     newOrgAdminNodeCert: admin01-org0-example-com-nodecert
+#
+
+- name: Show the passed in variable
+  debug:
+    var: action
+
+# Now we get the nodecert under which the operation is performed
+- name: Get user info
+  include_tasks: '{{ role_path }}/common/getuserinfo.yml'
+
+# Now we get the orderer node info from either nodecert or node asset
+- name: Get node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ ordererNode }}"
+
+- name: Get core yaml files
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}' 
+
+- name: Now generate the Peer asset for organization
+  template:
+    src: "{{ role_path }}/ops/orgjoin/templates/script.j2"
+    dest: "{{ agentworkdir }}/run.sh"

@@ -8,6 +8,11 @@
   vars:
     RESULT_MSG: 'Failed - No secret name provided'
 
+- name: Fixup the orderer name in case only the short name used
+  when: thesecretname is not regex('-asset$') and not (orgid in (ordererNode|replace('.','-')))
+  set_fact:
+    ordererNode: "{{ ordererNode|replace('.','-') }}-{{ orgid }}"
+
 - name: Search for the matching node cert secret
   community.kubernetes.k8s_info:
     kind: Secret

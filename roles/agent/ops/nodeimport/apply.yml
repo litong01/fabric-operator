@@ -1,11 +1,12 @@
 # To import external nodes into your clusters
 #
-# - name: nodeimport
-#   description: import node access point and various certificates
-#     into this cluster
-#   params:
-#   - name: assetname
-#     value: assets.zip
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: nodeimport
+#     description: import nodes and their certificates
+#     parameters:
+#       assetname: assets.zip
 #
 #  assetname is the tar or zip file file name which contains all the asset files
 #  this file must be uploaded to the controller prior executing this
@@ -17,8 +18,7 @@
 
 - name: Get variable with their names
   set_fact:
-    assetname: >-
-      {{ (action.params | selectattr('name','equalto','assetname') | map(attribute='value') | list)[0] }}
+    assetname: "{{ action.parameters.assetname }}"
 
 - name: End the process if asset name was not provided
   when: assetname == ''

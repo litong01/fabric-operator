@@ -1,0 +1,15 @@
+#!/bin/bash
+
+export FABRIC_CFG_PATH={{ agentworkdir }}/config
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID={{ orgid }}
+export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/user/tls/tlsca.crt
+export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/user/msp
+export CORE_PEER_ADDRESS={{ endpoint|replace('grpcs://', '') }}
+{{ bindir }}/bin/peer channel fetch config config_block.bk \
+  --tls -c {{ channelName }} \
+  -o {{ endpoint|replace('grpcs://', '') }} \
+  --cafile {{ agentworkdir }}/tls/tlsca.crt
+
+{{ bindir }}/bin/configtxlator proto_decode --input config_block.bk \
+  --type common.Block > {{ channelName }}_config.json

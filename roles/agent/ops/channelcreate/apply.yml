@@ -2,11 +2,12 @@
 #
 # - name: channelcreate
 #   description: Create new channel
-#   params:
-#   - name: channelName
-#     value: mychannel
-#   - name: initialOrdererNode
-#     value: orderer-sample
+#   actions:
+#   - name: channelcreate
+#     description: Create new channel
+#     parameters:
+#       channelName: mychannel
+#       initialOrdererNode: orderer-sample
 #
 # The initialOrdererNode node has to be running in the cluster, that means
 # the channel can only be created locally to the cluster, only the owning
@@ -15,10 +16,8 @@
 
 - name: Get variable with their names
   set_fact:
-    channelName: >-
-      {{ (action.params | selectattr('name','equalto','channelName') | map(attribute='value') | list)[0] }}
-    initialOrdererNode: >-
-      {{ (action.params | selectattr('name','equalto','initialOrdererNode') | map(attribute='value') | list)[0] }}
+    channelName: "{{ action.parameters.channel_name }}"
+    initialOrdererNode: "{{ action.parameters.initial_orderer_node }}"
 
 - name: End the process if either variable is empty
   when: channelName == '' or initialOrdererNode == ''

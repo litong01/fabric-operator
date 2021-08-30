@@ -7,6 +7,5 @@ spec:
   actions:
   - name: nodeimport
     description: import nodes and their certificates
-    params:
-    - name: assetname
-      value: assets.zip
+    parameters:
+      assetname: assets.zip

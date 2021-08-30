@@ -8,8 +8,6 @@ spec:
   actions:
   - name: channelcreate
     description: Create new channel
-    params:
-    - name: channelName
-      value: mychannel
-    - name: initialOrdererNode
-      value: orderer-sample
+    parameters:
+      channelName: mychannel1
+      initialOrdererNode: orderer-sample

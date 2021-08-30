@@ -2,16 +2,11 @@
 #
 # - name: channeljoin
 #   description: join a channel
-#   params:
-#   - name: channelName
-#     value: mychannel
-#   - name: peerNode
-#     value: peer-sample
-#   - name: ordererNode
-#     value: orderer-sample
+#   parameters:
+#     channelName: mychannel
+#     peerNode: peer-sample
+#     ordererNode: orderer-sample
 #
-# The peerNode parameter indicates the peer node to be joined to the channel
-# The peer node must be running in the cluster and the namespace.
 
 - name: Show the passed in variable
   debug:
@@ -19,12 +14,9 @@
 
 - name: Get variable with their names
   set_fact:
-    channelName: >-
-      {{ (action.params | selectattr('name','equalto','channelName') | map(attribute='value') | list)[0] }}
-    ordererNode: >-
-      {{ (action.params | selectattr('name','equalto','ordererNode') | map(attribute='value') | list)[0] }}
-    peerNode: >-
-      {{ (action.params | selectattr('name','equalto','peerNode') | map(attribute='value') | list)[0] }}
+    channelName: "{{ action.parameters.channel_name }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+    peerNode: "{{ action.parameters.peer_node }}"
 
 - name: End the process if either variable is empty
   when: channelName == '' or ordererNode == '' or peerNode == ''

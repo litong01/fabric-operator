@@ -1,23 +1,21 @@
 # To generate the asset file for console import
 #
-# - name: assetgen
-#   description: Generate organiztion asset for download and eventually
-#     import into console
-#   params:
-#   - name: assettypes
-#     value: ['ca', 'orderer', 'peer']
-#   - name: includewallets
-#     value: no
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: assetgen
+#     description: Generate asset file
+#     parameters:
+#       assettypes: ['ca', 'orderer', 'peer']
+#       includewallets: no
 #
 #  assettypes indicate what resource wanting to be included in the exported file
 #  includewallets indicates if the admin wallets should also be included
 
 - name: Get variable with their names
   set_fact:
-    assettypes: >-
-      {{ action.params | selectattr('name','equalto','assettypes') | map(attribute='value') | list }}
-    includewallets: >-
-      {{ (action.params | selectattr('name','equalto','includewallets') | map(attribute='value') | list)[0] }}
+    assettypes: "{{ action.parameters.assettypes }}"
+    includewallets: "{{ action.parameters.includewallets }}"
 
 - name: Fail the process if asset types are not provided
   when: (assettypes | length) == 0

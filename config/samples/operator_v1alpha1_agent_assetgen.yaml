@@ -7,9 +7,6 @@ spec:
   actions:
   - name: assetgen
     description: Generate asset file
-    params:
-    - name: assettypes
-      value: ['ca', 'orderer', 'peer']
-    - name: includewallets
-      value: no
-
+    parameters:
+      assettypes: ['ca', 'orderer', 'peer']
+      includewallets: no

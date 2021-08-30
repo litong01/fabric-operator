@@ -16,6 +16,4 @@ release: 2.3.2
 actions:
 - name:
   description:
-  params:
-  - name:
-    value:
+  parameters: {}

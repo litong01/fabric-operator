@@ -6,8 +6,9 @@ spec:
   organization: example.com
   nodeCert: admin01-sample
   actions:
-  - name: channelquery
+  - name: orgjoin
     description: query channel configuration
     parameters:
       channelName: mychannel
-      ordererNode: orderer-sample
+      orderer: orderer-sample
+      newOrgAdminNodeCert: admin01-sample-org0-example-com-nodecert

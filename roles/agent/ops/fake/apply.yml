@@ -2,11 +2,6 @@
 #
 # - name: channelquery
 #   description: query channel configuration
-#   params:
-#   - name: channelName
-#     value: mychannel
-#   - name: ordererNode
-#     value: orderer-sample
 #
 # The operation will look at the orderer nodecert first, if not found
 # it will try to find node asset to get endpoint and certificates.
