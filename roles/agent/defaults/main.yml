@@ -17,3 +17,6 @@ actions:
 - name:
   description:
   parameters: {}
+
+# Clear working directory after action is done
+cleanup: false

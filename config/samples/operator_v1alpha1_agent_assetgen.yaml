@@ -4,6 +4,7 @@ metadata:
   name: agent-sample
 spec:
   organization: example.com
+  cleanup: true
   actions:
   - name: assetgen
     description: Generate asset file

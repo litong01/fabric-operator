@@ -11,3 +11,9 @@
   loop: '{{ tactions }}'
   loop_control:
     loop_var: action
+
+- name: Make sure that the work directory is clean
+  when: cleanup == True
+  file:
+    path: '{{ workdir }}'
+    state: 'absent'
