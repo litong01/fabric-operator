@@ -3,7 +3,7 @@
   "msp_id": "{{ anode.spec.organization|replace('.', '-') }}",
   "name": "{{ anode.spec.organization }} MSP",
   "type": "msp",
-  "admins": [],
+  "admins": [ "{{ thesecret.resources[0].data['admin.crt'] }}" ],
   "root_certs": [
     "{{ thesecret.resources[0].data['ca-cert.pem'] }}"
   ],

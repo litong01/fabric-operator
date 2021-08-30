@@ -8,5 +8,5 @@ spec:
   - name: assetgen
     description: Generate asset file
     parameters:
-      assettypes: ['ca', 'orderer', 'peer']
+      assettypes: ['ca', 'orderer', 'peer', 'msp']
       includewallets: no

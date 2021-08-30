@@ -14,6 +14,24 @@
   loop_control:
     loop_var: party
 
+- name: Setup control items for an admin
+  set_fact:
+    extraparties: >-
+      {{ [ { 'type': 'admin', 'cn': 'Admin@'+organization, 'tls': False, 'id': (99999999 | random | to_uuid) },
+           { 'type': 'admin', 'cn': 'Admin@'+organization, 'tls': True, 'id': (99999999 | random | to_uuid) }
+      ] }}
+    cadata: >-
+      {{ { 'ca-cert.pem': lookup('file', certdir+'/'+parties[0].id+'-cert.pem', errors='ignore')|b64encode,
+           'ca-key.pem': lookup('file', certdir+'/'+parties[0].id+'-key.pem', errors='ignore')|b64encode,
+           'tls-cert.pem': lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore')|b64encode,
+           'tls-key.pem': lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore')|b64encode } }}
+
+- name: Generate cert and key pairs
+  include_tasks: "one-cert.yml"
+  loop: "{{ extraparties }}"
+  loop_control:
+    loop_var: party
+
 - name: Create nodecert secret
   community.kubernetes.k8s:
     definition:
@@ -31,5 +49,9 @@
         ca-key.pem: "{{ lookup('file', certdir+'/'+parties[0].id+'-key.pem', errors='ignore') | b64encode }}"
         tls-cert.pem: "{{ lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore') | b64encode }}"
         tls-key.pem: "{{ lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore') | b64encode }}"
+        admin.key: "{{ lookup('file', certdir+'/'+extraparties[0].id+'-key.pem', errors='ignore') | b64encode }}"
+        admin.crt: "{{ lookup('file', certdir+'/'+extraparties[0].id+'-cert.pem', errors='ignore') | b64encode }}"
+        admintls.key: "{{ lookup('file', certdir+'/'+extraparties[1].id+'-key.pem', errors='ignore') | b64encode }}"
+        admintls.crt: "{{ lookup('file', certdir+'/'+extraparties[1].id+'-cert.pem', errors='ignore') | b64encode }}"
         adminid: "{{ lookup('community.general.random_string', length=8, special=false) | b64encode }}"
         adminpw: "{{ lookup('community.general.random_string', length=12, special=false) | b64encode }}"

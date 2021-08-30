@@ -6,10 +6,10 @@
 
 - name: Create the secret name
   set_fact:
-    theassetsname: "{{ theasset.name|default('')|replace('.', '-') }}"
+    theassetsname: "{{ theasset.name|default('')|replace('.', '-')|replace(' ', '-')|lower }}"
 
 - name: Save the content to a secret
-  when: theassetsname != '' and (theasset.type|lower) in ('fabric-ca', 'fabric-peer', 'fabric-orderer')
+  when: theassetsname != '' and (theasset.type|lower) in ('fabric-ca', 'fabric-peer', 'fabric-orderer', 'msp')
   community.kubernetes.k8s:
     definition:
       kind: Secret
