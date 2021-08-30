@@ -9,5 +9,5 @@ spec:
   - name: channelcreate
     description: Create new channel
     parameters:
-      channelName: mychannel1
+      channelName: mychannel
       initialOrdererNode: orderer-sample
