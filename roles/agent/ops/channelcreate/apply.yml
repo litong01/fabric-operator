@@ -7,9 +7,12 @@
 #     description: Create new channel
 #     parameters:
 #       channelName: mychannel
-#       initialOrdererNode: orderer-sample
+#       ordererNode: orderer-sample
+#       additionalOrgs:
+#       - org0-example-com-msp-asset
+#       - org1-example-com-msp-asset
 #
-# The initialOrdererNode node has to be running in the cluster, that means
+# The ordererNode node has to be running in the cluster, that means
 # the channel can only be created locally to the cluster, only the owning
 # organization of the orderer node can create the new channel.
 # Both parameters are required
@@ -17,74 +20,41 @@
 - name: Get variable with their names
   set_fact:
     channelName: "{{ action.parameters.channel_name }}"
-    initialOrdererNode: "{{ action.parameters.initial_orderer_node }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+    additionalOrgs: "{{ action.parameters.additional_orgs }}"
 
 - name: End the process if either variable is empty
-  when: channelName == '' or initialOrdererNode == ''
+  when: channelName == '' or ordererNode == ''
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Failed - Both channel name and initial orderer node must be provided'
+    RESULT_MSG: 'Failed - Both channel name and orderer node must be provided'
 
-- name: Search for the orderer matching node cert secret
-  community.kubernetes.k8s_info:
-    kind: Secret
-    api_version: v1
-    name: '{{ initialOrdererNode }}-{{ orgid }}-nodecert'
-    namespace: '{{ ansible_operator_meta.namespace }}'
-  register: nodecert_secret
-
-- name: End the process if there is no orderer secret found
-  when: (nodecert_secret.resources|length) == 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
-  vars:
-    RESULT_MSG: 'Failed - Cannot find the orderer node {{ initialOrdererNode }} certificates'
-
-- name: Search for the orderer node
-  community.kubernetes.k8s_info:
-    kind: Orderer
-    api_version: 'operator.fabric.hyperledger.org/v1alpha1'
-    name: '{{ initialOrdererNode }}'
-    namespace: '{{ ansible_operator_meta.namespace }}'
-  register: orderernode
-
-- name: End the process if there is no orderer node found
-  when: (orderernode.resources|length) == 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
-  vars:
-    RESULT_MSG: 'Failed - Cannot find the orderer node {{ initialOrdererNode }}'
-
-- name: Get the orderer node endpoints
+- name: Fixup the orderer name in case only the short name used
+  when: not (orgid in (ordererNode))
   set_fact:
-    endpoint: '{{ orderernode.resources[0].status.endpoint | replace("grpcs://", "") }}'
-    adminendpoint: '{{ orderernode.resources[0].status.adminendpoint }}'
+    ordererNode: "{{ ordererNode }}-{{ orgid }}"
+
+- name: Layout orderer node certs based on the secret
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ ordererNode }}"
 
 - name: Copy original config to working directory
   copy:
     src: '{{ bindir }}/config'
     dest: '{{ agentworkdir }}'
 
-- name: Get certs directory set up
-  file:
-    path: '{{ agentworkdir }}/{{ item }}'
-    state: 'directory'
-    mode: 0775
-  with_items:
-  - 'msp'
-  - 'msp/cacerts'
-  - 'msp/tlscacerts'
-  - 'tls'
+# Getting additional orgs certs
+- name: Layout additional org certs
+  when: additionalOrgs|length > 0
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  loop: '{{ additionalOrgs }}'
+  loop_control: 
+    loop_var: thesecretname
 
-- name: Write certs to the correct location
-  copy:
-    content: '{{ nodecert_secret.resources[0].data[item.src]|b64decode }}'
-    dest: '{{ agentworkdir }}/{{ item.dest }}'
-  with_items:
-  - "{{ { 'src': 'ca.crt', 'dest': 'msp/cacerts/ca.pem'} }}"
-  - "{{ { 'src': 'tlsca.crt', 'dest': 'msp/tlscacerts/ca.crt'} }}"
-  - "{{ { 'src': 'tlsca.crt', 'dest': 'tls/ca.crt'} }}"
-  - "{{ { 'src': 'tls.crt', 'dest': 'tls/server.crt'} }}"
-  - "{{ { 'src': 'tls.key', 'dest': 'tls/server.key'} }}"
-  - "{{ { 'src': 'config.yaml', 'dest': 'msp/config.yaml'} }}"
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
 
 - name: Setup configtx file
   template:
@@ -99,14 +69,23 @@
   args:
     chdir: '{{ agentworkdir }}/config'
     executable: /bin/bash
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Update the resource status
+  when: cmdresult.rc != 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: "Failed - {{ cmdresult.stderr }}"
 
 - name: 'Join the orderer node to the channel {{ channelName }}'
   ansible.builtin.shell: |
     export FABRIC_CFG_PATH={{ agentworkdir }}/config
     {{ bindir }}/bin/osnadmin channel join --channelID {{ channelName }} \
-    -o {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7080 \
-    --config-block newc.bk --ca-file ../tls/ca.crt \
-    --client-cert ../tls/server.crt --client-key ../tls/server.key
+    -o {{ ordererid.adminendpoint }} \
+    --config-block newc.bk --ca-file ../{{ ordererNode }}/tls/ca.crt \
+    --client-cert ../{{ ordererNode }}/tls/client.crt \
+    --client-key ../{{ ordererNode }}/tls/client.key
   args:
     chdir: '{{ agentworkdir }}/config'
     executable: /bin/bash

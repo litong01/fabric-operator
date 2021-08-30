@@ -6,11 +6,8 @@ spec:
   organization: example.com
   nodeCert: admin01-sample
   actions:
-  - name: channelcreate
-    description: Create new channel
+  - name: channelquery
+    description: query channel configuration
     parameters:
       channelName: mychannel
       ordererNode: orderer-sample
-      additionalOrgs:
-#       - org0-example-com-msp-asset
-#       - org1-example-com-msp-asset

@@ -2,7 +2,7 @@ Organizations:
 - &{{ orgid }}
   Name: {{ orgid }}
   ID: {{ orgid }}
-  MSPDir: {{ agentworkdir }}/msp
+  MSPDir: {{ agentworkdir }}/{{ ordererNode }}/msp
   Policies:
     Readers:
       Type: Signature
@@ -17,10 +17,29 @@ Organizations:
       Type: Signature
       Rule: "OR('{{ orgid }}.peer')"
   OrdererEndpoints:
-  - {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7050
-{% if endpoint is defined %}
-  - {{ endpoint }}
-{% endif %}
+  - {{ ordererid.endpoint }}
+
+{% for org in additionalOrgs %}
+{% set theattr = (lookup('file', agentworkdir+'/'+org+'/msp/id.json')|from_json)  %}
+- &{{ theattr.mspid }}
+  Name: {{ theattr.mspid }}
+  ID: {{ theattr.mspid }}
+  MSPDir: {{ agentworkdir }}/{{ org }}/msp
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.orderer')"
+    Writers:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.orderer')"
+    Admins:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin')"
+    Endorsement:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.peer')"
+
+{% endfor %}
 
 Capabilities:
   Channel: &ChannelCapabilities
@@ -55,17 +74,14 @@ Application: &ApplicationDefaults
 Orderer: &OrdererDefaults
   OrdererType: etcdraft
   Addresses:
-  - {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7050
-{% if endpoint is defined %}
-  - {{ endpoint }}
-{% endif %}
+  - {{ ordererid.endpoint }}
 
   EtcdRaft:
     Consenters:
-    - Host: {{ initialOrdererNode }}.{{ ansible_operator_meta.namespace }}:7050
+    - Host: {{ ordererNode }}.{{ ansible_operator_meta.namespace }}:7050
       Port: 7050        
-      ClientTLSCert: {{ agentworkdir }}/tls/server.crt
-      ServerTLSCert: {{ agentworkdir }}/tls/server.crt
+      ClientTLSCert: {{ agentworkdir }}/{{ ordererNode }}/tls/client.crt
+      ServerTLSCert: {{ agentworkdir }}/{{ ordererNode }}/tls/client.crt
 
   BatchTimeout: 2s
   BatchSize:
@@ -115,5 +131,8 @@ Profiles:
     Application:
       <<: *ApplicationDefaults
       Organizations:
-      - *{{ orgid }}
+{% for org in additionalOrgs %}
+{% set theattr = (lookup('file', agentworkdir+'/'+org+'/msp/id.json')|from_json) %}
+      - *{{ theattr.mspid }}
+{% endfor %}
       Capabilities: *ApplicationCapabilities

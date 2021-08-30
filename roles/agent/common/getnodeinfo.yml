@@ -1,17 +1,26 @@
 # thesecretname must be the full name, it is made up by
 # the resource name + '-' + organization name with dot(.)
 # being replaced by dash '-'
+# This module will try to look up the secret and its node
+# then produce the msp, tls and endpoint file under the
+# directory by the secretname for example
+#
+# if the secret is orderer-sample and orgid is example-com
+#
+#    orderer-sample-example-com
+#    orderer-sample-example-com/msp
+#    orderer-sample-example-com/msp/cacerts
+#    orderer-sample-example-com/msp/keystore
+#    orderer-sample-example-com/msp/signcerts
+#    orderer-sample-example-com/msp/tlscacerts
+#    orderer-sample-example-com/tls
+#    orderer-sample-example-com/msp/id.json
 
 - name: Check if name variable is set
   when: (thesecretname|trim) == ''
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - No secret name provided'
-
-- name: Fixup the orderer name in case only the short name used
-  when: thesecretname is not regex('-asset$') and not (orgid in (ordererNode|replace('.','-')))
-  set_fact:
-    ordererNode: "{{ ordererNode|replace('.','-') }}-{{ orgid }}"
 
 - name: Search for the matching node cert secret
   community.kubernetes.k8s_info:
@@ -21,10 +30,10 @@
     namespace: '{{ ansible_operator_meta.namespace }}'
   register: nodecert_secret
 
-- name: Search for the match actual node
+- name: Process when secret was found
   when: (nodecert_secret.resources|length) > 0
   block:
-  - name: Search for the orderer node
+  - name: Search for the node
     community.kubernetes.k8s_info:
       kind: "{{ nodecert_secret.resources[0].metadata.labels['fabric-node-type'] }}"
       api_version: 'operator.fabric.hyperledger.org/v1alpha1'
@@ -37,11 +46,27 @@
     include_tasks: '{{ role_path }}/common/endplay.yml'
     vars:
       RESULT_MSG: 'Failed - Node {{ nodecert_secret.resources[0].metadata.ownerReferences[0].name }} not found'
-  
-  - name: Get the node endpoint and cert
+
+  - name: Set node type
     set_fact:
-      endpoint: "{{ realnode.resources[0].status.endpoint }}"
-      tlsca: "{{ nodecert_secret.resources[0].data['tlsca.crt'] | b64decode }}"
+      nodetype: >-
+        {{ ((nodecert_secret.resources[0].metadata.labels['fabric-node-type']|lower)=='ca')|ternary('ca', '') }}
+
+  # Now we get the node cert and save to the working directory
+  - name: Layout node cert information
+    include_tasks: '{{ role_path }}/common/layout{{ nodetype }}nodecerts.yml'
+    vars:
+      nodeid: "{{ thesecretname }}"
+      data: "{{ nodecert_secret.resources[0].data }}"
+
+  - name: Create the endpoint and mspid file
+    copy:
+      dest: "{{ agentworkdir }}/{{ thesecretname }}/msp/id.json"
+      content: >-
+        {{ { 'endpoint': realnode.resources[0].status.endpoint|default('')|replace('grpcs://', ''),
+             'adminendpoint': realnode.resources[0].status.adminendpoint|default('')|replace('https://', ''),
+             'mspid': nodecert_secret.resources[0].metadata.labels['fabric-organization']|replace('.','-')
+           } | to_nice_json(indent=2) }}
 
 - name: Search for the matching node asset secret
   when: (nodecert_secret.resources|length) == 0
@@ -60,30 +85,9 @@
     vars:
       RESULT_MSG: 'Failed - Secret {{ thesecretname }}-asset not found'
 
-  - name: Get the imported node asset from the secret
-    set_fact:
-      assetobj: '{{ asset_secret.resources[0].data.asset | b64decode | from_json }}'
-
-  - name: Get the node endpoint and cert
-    set_fact:
-      endpoint: "{{ assetobj['api_url'] }}"
-      tlsca: "{{ assetobj['tls_ca_root_cert'] | b64decode }}"
-
-# When we reach here, we should have the following
-#    endpoint
-#    tlsca
-
-- name: Set up node tls directory
-  file:
-    path: '{{ agentworkdir }}/{{ item }}'
-    state: 'directory'
-    mode: 0775
-  with_items:
-  - 'tls'
-
-- name: Write certs to the directory
-  copy:
-    content: '{{ item.content }}'
-    dest: '{{ agentworkdir }}/tls/{{ item.name }}'
-  with_items:
-  - "{{ { 'name': 'tlsca.crt', 'content': tlsca } }}"
+  # Now we get the asset cert and save to the working directory
+  - name: Layout asset information
+    include_tasks: '{{ role_path }}/common/layoutassetcerts.yml'
+    vars:
+      nodeid: "{{ thesecretname }}"
+      data: "{{ asset_secret.resources[0].data }}"

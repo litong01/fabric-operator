@@ -1,0 +1,36 @@
+---
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: CA
+metadata:
+  name: ca1
+spec:
+  # Add fields here
+  organization: example.com
+  nodeCert:
+  release: 1.5.0
+  storage: 1Gi
+  logLevel: DEBUG
+---
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: CA
+metadata:
+  name: org0ca1
+spec:
+  # Add fields here
+  organization: org0.example.com
+  nodeCert:
+  release: 1.5.0
+  storage: 1Gi
+  logLevel: DEBUG
+---
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: CA
+metadata:
+  name: org1ca1
+spec:
+  # Add fields here
+  organization: org1.example.com
+  nodeCert:
+  release: 1.5.0
+  storage: 1Gi
+  logLevel: DEBUG

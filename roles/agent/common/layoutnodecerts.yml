@@ -1,0 +1,56 @@
+# This module layout certs in the msp structure
+# The input must be the following
+#    nodeid - indicate what nodeid is
+#    resdata - the data out of the secret
+
+- name: Check if name variable is set
+  when: nodeid == '' or data == None 
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - No nodeid or data provided'
+
+- name: Set up user msp directory
+  file:
+    path: '{{ agentworkdir }}/{{ item }}'
+    state: 'directory'
+    mode: 0775
+  with_items:
+  - '{{ nodeid }}'
+  - '{{ nodeid }}/msp'
+  - '{{ nodeid }}/msp/cacerts'
+  - '{{ nodeid }}/msp/keystore'
+  - '{{ nodeid }}/msp/signcerts'
+  - '{{ nodeid }}/msp/tlscacerts'
+  - '{{ nodeid }}/tls'
+
+- name: Write certs to the correct location
+  copy:
+    content: '{{ data[item.src]|b64decode }}'
+    dest: '{{ agentworkdir }}/{{ nodeid }}/{{ item.dest }}'
+  with_items:
+  - "{{ { 'src': 'ca.crt',      'dest': 'msp/cacerts/ca.pem'} }}"
+  - "{{ { 'src': 'server.crt',  'dest': 'msp/signcerts/user.crt'} }}"
+  - "{{ { 'src': 'server.key',  'dest': 'msp/keystore/prive_sk'} }}"
+  - "{{ { 'src': 'tlsca.crt',   'dest': 'msp/tlscacerts/ca.crt'} }}"
+  - "{{ { 'src': 'tlsca.crt',   'dest': 'tls/ca.crt'} }}"
+  - "{{ { 'src': 'tls.crt',     'dest': 'tls/client.crt'} }}"
+  - "{{ { 'src': 'tls.key',     'dest': 'tls/client.key'} }}"
+
+- name: Create the config.yaml file
+  copy:
+    dest: "{{ agentworkdir }}/{{ nodeid }}/msp/config.yaml"
+    content: >-
+      NodeOUs:
+        Enable: true
+        ClientOUIdentifier:
+          Certificate: cacerts/ca.pem
+          OrganizationalUnitIdentifier: client
+        PeerOUIdentifier:
+          Certificate: cacerts/ca.pem
+          OrganizationalUnitIdentifier: peer
+        AdminOUIdentifier:
+          Certificate: cacerts/ca.pem
+          OrganizationalUnitIdentifier: admin
+        OrdererOUIdentifier:
+          Certificate: cacerts/ca.pem
+          OrganizationalUnitIdentifier: orderer

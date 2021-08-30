@@ -1,0 +1,11 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Chaincode
+metadata:
+  name: chaincode-sample
+spec:
+  organization: example.com
+  nodeCert:
+  release: 2.3.2
+  image: email4tong/simple:v1.0.0
+  ccid: testid
+  logLevel: ERROR

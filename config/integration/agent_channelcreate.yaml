@@ -1,16 +1,15 @@
 apiVersion: operator.fabric.hyperledger.org/v1alpha1
 kind: Agent
 metadata:
-  name: agent-sample
+  name: agent-channel-create
 spec:
   organization: example.com
-  nodeCert: admin01-sample
   actions:
   - name: channelcreate
     description: Create new channel
     parameters:
       channelName: mychannel
-      ordererNode: orderer-sample
+      ordererNode: orderer1
       additionalOrgs:
-#       - org0-example-com-msp-asset
-#       - org1-example-com-msp-asset
+      - org0ca1-org0-example-com
+      - org1ca1-org1-example-com

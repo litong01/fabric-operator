@@ -1,0 +1,26 @@
+---
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Peer
+metadata:
+  name: peer1
+spec:
+  # Add fields here
+  organization: org0.example.com
+  nodeCert:
+  release: 2.3.2
+  storage: 1Gi
+  logLevel: DEBUG
+---
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Peer
+metadata:
+  name: peer1
+spec:
+  organization: org1.example.com
+  nodeCert:
+  release: 1.5.0
+  storage: 1Gi
+  logLevel: DEBUG
+
+
+

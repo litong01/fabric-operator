@@ -1,0 +1,28 @@
+---
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: agent1
+spec:
+  organization: org0.example.com
+  cleanup: true
+  actions:
+  - name: assetgen
+    description: Generate asset file
+    parameters:
+      assettypes: ['ca', 'orderer', 'peer', 'msp']
+      includewallets: no
+---
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: agent2
+spec:
+  organization: org1.example.com
+  cleanup: true
+  actions:
+  - name: assetgen
+    description: Generate asset file
+    parameters:
+      assettypes: ['ca', 'orderer', 'peer', 'msp']
+      includewallets: no
