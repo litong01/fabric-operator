@@ -8,8 +8,8 @@ spec:
   - name: channelcreate
     description: Create new channel
     parameters:
-      channelName: mychannel
-      ordererNode: orderer1
+      channelName: mychannel1
+      ordererNode: orderer1-example-com
       additionalOrgs:
       - org0ca1-org0-example-com
       - org1ca1-org1-example-com

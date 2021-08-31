@@ -131,6 +131,7 @@ Profiles:
     Application:
       <<: *ApplicationDefaults
       Organizations:
+      - *{{ orgid }}
 {% for org in additionalOrgs %}
 {% set theattr = (lookup('file', agentworkdir+'/'+org+'/msp/id.json')|from_json) %}
       - *{{ theattr.mspid }}

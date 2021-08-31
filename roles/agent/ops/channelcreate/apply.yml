@@ -29,11 +29,6 @@
   vars:
     RESULT_MSG: 'Failed - Both channel name and orderer node must be provided'
 
-- name: Fixup the orderer name in case only the short name used
-  when: not (orgid in (ordererNode))
-  set_fact:
-    ordererNode: "{{ ordererNode }}-{{ orgid }}"
-
 - name: Layout orderer node certs based on the secret
   include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
   vars:

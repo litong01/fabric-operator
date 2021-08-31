@@ -20,9 +20,7 @@
       cadata: "{{ casecret.resources[0].data }}"
       parties: >-
         {{ [ { 'type': 'peer', 'cn': nodename, 'tls': False, 'id': (99999999 | random | to_uuid) },
-             { 'type': 'peer', 'cn': 'tls'+nodename, 'tls': True, 'id': (99999999 | random | to_uuid) },
-             { 'type': 'admin', 'cn': 'Admin@'+organization, 'tls': False, 'id': (99999999 | random | to_uuid) },
-             { 'type': 'admin', 'cn': 'Admin@'+organization, 'tls': True, 'id': (99999999 | random | to_uuid) }
+             { 'type': 'peer', 'cn': 'tls'+nodename, 'tls': True, 'id': (99999999 | random | to_uuid) }
         ] }}
 
   - name: Generate cert and key pairs
@@ -68,8 +66,8 @@
           server.crt: "{{ lookup('file', certdir+'/'+parties[0].id+'-cert.pem', errors='ignore') | b64encode }}"
           tls.key: "{{ lookup('file', certdir+'/'+parties[1].id+'-key.pem', errors='ignore') | b64encode }}"
           tls.crt: "{{ lookup('file', certdir+'/'+parties[1].id+'-cert.pem', errors='ignore') | b64encode }}"
-          admin.key: "{{ lookup('file', certdir+'/'+parties[2].id+'-key.pem', errors='ignore') | b64encode }}"
-          admin.crt: "{{ lookup('file', certdir+'/'+parties[2].id+'-cert.pem', errors='ignore') | b64encode }}"
-          admintls.key: "{{ lookup('file', certdir+'/'+parties[3].id+'-key.pem', errors='ignore') | b64encode }}"
-          admintls.crt: "{{ lookup('file', certdir+'/'+parties[3].id+'-cert.pem', errors='ignore') | b64encode }}"
+          admin.key: "{{ cadata['admin.key'] }}"
+          admin.crt: "{{ cadata['admin.crt'] }}"
+          admintls.key: "{{ cadata['admintls.key'] }}"
+          admintls.crt: "{{ cadata['admintls.crt'] }}"
           config.yaml: "{{ nodeconfig | b64encode }}"

@@ -17,6 +17,7 @@
   with_items:
   - '{{ nodeid }}'
   - '{{ nodeid }}/msp'
+  - '{{ nodeid }}/msp/admincerts'
   - '{{ nodeid }}/msp/cacerts'
   - '{{ nodeid }}/msp/signcerts'
   - '{{ nodeid }}/msp/tlscacerts'
@@ -27,8 +28,9 @@
     content: '{{ data[item.src]|b64decode }}'
     dest: '{{ agentworkdir }}/{{ nodeid }}/{{ item.dest }}'
   with_items:
+  - "{{ { 'src': 'admin.crt',    'dest': 'msp/admincerts/admin.pem'} }}"
   - "{{ { 'src': 'ca-cert.pem',    'dest': 'msp/cacerts/ca.pem'} }}"
-  - "{{ { 'src': 'admin.crt',      'dest': 'msp/signcerts/user.crt'} }}"
+  - "{{ { 'src': 'ca-cert.pem',      'dest': 'msp/signcerts/user.crt'} }}"
   - "{{ { 'src': 'tls-cert.pem',     'dest': 'msp/tlscacerts/ca.crt'} }}"
   - "{{ { 'src': 'tls-cert.pem',     'dest': 'tls/ca.crt'} }}"
 

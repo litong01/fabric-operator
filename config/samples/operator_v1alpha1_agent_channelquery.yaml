@@ -10,4 +10,4 @@ spec:
     description: query channel configuration
     parameters:
       channelName: mychannel
-      ordererNode: orderer-sample
+      ordererNode: orderer-sample-example-com

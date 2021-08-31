@@ -5,4 +5,4 @@
 
 - name: Set mspid
   set_fact:
-    mspid: "{{ ansible_operator_meta.name }}-{{ organization|replace('.', '-') }}"
+    mspid: "{{ organization|replace('.', '-') }}"

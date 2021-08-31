@@ -24,11 +24,6 @@
     channelName: "{{ action.parameters.channel_name }}"
     ordererNode: "{{ action.parameters.orderer_node }}"
 
-- name: Fixup the orderer name in case only the short name used
-  when: not (orgid in (ordererNode))
-  set_fact:
-    ordererNode: "{{ ordererNode }}-{{ orgid }}"
-
 - name: End the process if either variable is empty
   when: channelName == '' or ordererNode == ''
   include_tasks: '{{ role_path }}/common/endplay.yml'
