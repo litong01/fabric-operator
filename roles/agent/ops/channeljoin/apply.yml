@@ -1,12 +1,14 @@
 # To create a new channel, an action must look like this
 #
-# - name: channeljoin
-#   description: join a channel
-#   parameters:
-#     channelName: mychannel
-#     peerNode: peer-sample
-#     ordererNode: orderer-sample
-#
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: channeljoin
+#     description: join a peer to the channel
+#     parameters:
+#       channelName: mychannel
+#       ordererNode: orderer-sample-example-com
+#       peerNode: peer-sample-example-com
 
 - name: Show the passed in variable
   debug:
@@ -25,14 +27,27 @@
     RESULT_MSG: 'Failed - Channel name, orderer node, peer node all must be provided'
 
 # Now we get the nodecert under which the operation is performed
-- name: Get user info
-  include_tasks: '{{ role_path }}/common/getuserinfo.yml'
+# - name: Get user info
+#   include_tasks: '{{ role_path }}/common/getuserinfo.yml'
 
 # Now we get the orderer node info from either nodecert or node asset
-- name: Get node info
+- name: Get orderer node info
   include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
+
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
 
 - name: Get core yaml files
   copy:
@@ -40,19 +55,43 @@
     dest: '{{ agentworkdir }}' 
 
 # When we reach here, we should have either the orderer node cert or
-# orderer node asset secret.
+# orderer node asset secret. Here the orderer node is used as peer
+# credential (msp) contains the actual user msp information. This is
+# extremely confusing.
 - name: 'Query channel {{ channelName }}'
   ansible.builtin.shell: |
     export FABRIC_CFG_PATH={{ agentworkdir }}/config
     export CORE_PEER_TLS_ENABLED=true
-    export CORE_PEER_LOCALMSPID={{ orgid}}
-    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/tls/tlsca.crt
-    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/user/msp
-    export CORE_PEER_ADDRESS={{ endpoint|replace('grpcs://', '') }}
+    export CORE_PEER_LOCALMSPID={{ ordererid.mspid }}
+    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ ordererNode }}/msp
+    export CORE_PEER_ADDRESS={{ ordererid.endpoint }}
     {{ bindir }}/bin/peer channel fetch config config_block.bk \
-    --tls -c {{ channelName }} \
-    -o {{ endpoint|replace('grpcs://', '') }} \
-    --cafile {{ agentworkdir }}/tls/tlsca.crt
+    --tls -c {{ channelName }} -o {{ ordererid.endpoint }} \
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+  args:
+    chdir: '{{ agentworkdir }}'
+    executable: /bin/bash
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Update the resource status
+  when: cmdresult.rc != 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: "Failed - {{ cmdresult.stderr }}"
+
+- name: 'Join the peer to the channel {{ channelName }}'
+  ansible.builtin.shell: |
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
+    export CORE_PEER_TLS_ENABLED=true
+    export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+    export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+    {{ bindir }}/bin/peer channel join -b config_block.bk \
+    --tls -o {{ ordererid.endpoint }} \
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
   args:
     chdir: '{{ agentworkdir }}'
     executable: /bin/bash
@@ -68,9 +107,4 @@
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
     RESULT_MSG: >-
-      {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel Query', 'Failed - '+cmdresult.stderr) }}
-    DOWNLOAD_MSG: >-
-      kubectl cp -n {{ controllerns }} -c manager
-      {{ podname }}:{{ agentworkdir }}/config_block.bk
-      
-
+      {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel join', 'Failed - '+cmdresult.stderr) }}
