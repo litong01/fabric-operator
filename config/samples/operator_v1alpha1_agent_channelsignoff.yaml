@@ -8,7 +8,7 @@ spec:
   - name: channelsignoff
     description: sign off channel configuration changes
     parameters:
-      newconfig: config_block.json
+      newconfig: mychannel_config.json
       channelName: mychannel
       ordererNode: orderer-sample-example-com
       peerNode: peer-sample-example-com
