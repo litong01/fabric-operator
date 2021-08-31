@@ -1,0 +1,14 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: agent-sample
+spec:
+  organization: example.com
+  actions:
+  - name: channelsignoff
+    description: sign off channel configuration changes
+    parameters:
+      newconfig: config_block.json
+      channelName: mychannel
+      ordererNode: orderer-sample-example-com
+      peerNode: peer-sample-example-com

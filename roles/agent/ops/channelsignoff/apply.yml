@@ -1,0 +1,128 @@
+# To import external nodes into your clusters
+#
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: channelsignoff
+#     description: sign off channel configuration changes
+#     parameters:
+#       newconfig: config_block.json
+#       channelName: mychannel
+#       ordererNode: orderer-sample-example-com
+#       peerNode: peer-sample-example-com
+#
+# newconfig indicate the desired channel configuration which must be
+# a full channel configuration json file. This file has to be uploaded
+# to the agent first
+#
+# channelName is the channel name which will be updated.
+#
+# ordererNode is the orderer node used to send channel changes to.
+# this node can be an imported node, only needs its endpoint and
+# ca tls cert.
+#
+# peerNode is the peer node under which credential that the changes
+# will be made. It has to be a full node with all the signing and
+# private key certs available.
+
+- name: Show the passed in variable
+  debug:
+    var: action
+
+- name: Get variable with their names
+  set_fact:
+    newconfig: "{{ action.parameters.newconfig }}"
+    channelName: "{{ action.parameters.channel_name }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+    peerNode: "{{ action.parameters.peer_node }}"
+
+- name: End the process if asset name was not provided
+  when: newconfig == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - new channel configuration json file {{ newconfig }} must be provided for channel changes'
+
+- name: Setup upload dir
+  set_fact:
+    targetdir: "{{ lookup('env','HOME') }}/agent/upload"
+
+- name: Make sure that target directory exists
+  file:
+    path: '{{ targetdir }}'
+    state: 'directory'
+    mode: 0775
+
+- name: Check if the new configuration file exists
+  stat:
+    path: '{{ targetdir }}/{{ newconfig }}'
+  register: configfile
+
+- name: End the process when new configuration file does not exist
+  when: not configfile.stat.exists
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - new channel configuration json file {{ newconfig }} must be uploaded for channel changes'
+
+- name: Get new configuration json file
+  copy:
+    src: '{{ targetdir }}/{{ newconfig }}'
+    dest: '{{ agentworkdir }}/{{ channelName }}_config.json' 
+
+# Now we get the orderer node info from either nodecert or node asset
+- name: Get orderer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ ordererNode }}"
+
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
+
+- name: Get core yaml files
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}'
+
+- name: Generate the signoff script
+  template:
+    src: "{{ role_path }}/ops/channelsignoff/templates/signoff.j2"
+    dest: "{{ agentworkdir }}/signoff.sh"
+    mode: +x
+
+- name: Sign off the changes
+  ansible.builtin.command: "{{ agentworkdir }}/signoff.sh"
+  args:
+    chdir: '{{ agentworkdir }}'
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Update the resource status
+  when: cmdresult.rc != 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: "Failed - Channel Signoff. {{ cmdresult.stderr }}"
+
+- name: Get the pod name
+  set_fact:
+    podname: "{{ lookup('env', 'HOSTNAME') }}"
+    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
+
+- name: Setup destination dir
+  set_fact:
+    agentrootdir: "{{ lookup('env','HOME') }}/agent"
+
+- name: Update the crd status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded - Channel Signoff'
+    DOWNLOAD_MSG: >-
+      kubectl cp -n {{ controllerns }} -c manager {{ podname }}:{{ agentrootdir }}/download/{{ channelName }}_update_envelope.pb

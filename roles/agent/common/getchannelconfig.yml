@@ -1,23 +1,9 @@
-# To create a new channel, an action must look like this
-#
-# spec:
-#   description: query channel configuration
-#   organization: example.com
-#   actions:
-#   - name: channelquery
-#     description: query channel configuration
-#     parameters:
-#       channelName: mychannel
-#       ordererNode: orderer-sample
-#
-# The operation will look at the orderer nodecert first, if not found
-# it will try to find node asset to get endpoint and certificates.
-# either the short orderer node name or the full orderer name can be
-# used
+# This module uses one orderer node and one peer node to
+# retrieve current channel configuration.
+# the two parameters passed in must be an orderer node
+# full name such as orderer-sample-example-com or asset
+# name
 
-- name: Show the passed in variable
-  debug:
-    var: action
 
 - name: Get variable with their names
   set_fact:
@@ -51,7 +37,6 @@
 # extremely confusing.
 - name: 'Query channel {{ channelName }}'
   ansible.builtin.shell: |
-    set -e
     export FABRIC_CFG_PATH={{ agentworkdir }}/config
     export CORE_PEER_TLS_ENABLED=true
     export CORE_PEER_LOCALMSPID={{ ordererid.mspid }}
@@ -61,34 +46,8 @@
     {{ bindir }}/bin/peer channel fetch config config_block.bk \
     --tls -c {{ channelName }} -o {{ ordererid.endpoint }} \
     --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
-    {{ bindir }}/bin/configtxlator proto_decode --input config_block.bk \
-    --type common.Block | jq .data.data[0].payload.data.config > {{ channelName}}_config.json
-    cp {{ channelName}}_config.json ~/agent/download
-    cp {{ channelName}}_config.json ~/agent/upload
   args:
     chdir: '{{ agentworkdir }}'
     executable: /bin/bash
   register: cmdresult
   ignore_errors: yes
-
-- name: Update the resource status
-  when: cmdresult.rc != 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
-  vars:
-    RESULT_MSG: "Failed - Channel Query {{ cmdresult.stderr }}"
-
-- name: Setup destination dir
-  set_fact:
-    agentrootdir: "{{ lookup('env','HOME') }}/agent"
-
-- name: Get the pod name
-  set_fact:
-    podname: "{{ lookup('env', 'HOSTNAME') }}"
-    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
-
-- name: Update the resource status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
-  vars:
-    RESULT_MSG: 'Succeeded - Channel Query'
-    DOWNLOAD_MSG: >-
-      kubectl cp -n {{ controllerns }} -c manager {{ podname }}:{{ agentrootdir }}/download/{{ channelName}}_config.json

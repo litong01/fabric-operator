@@ -1,0 +1,126 @@
+# To import external nodes into your clusters
+#
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: channelupdate
+#     description: commit a channel update after a channel changes have been signed off by enough orgs
+#     parameters:
+#       envelopeFile: mychannel_update_envelope.pb
+#       channelName: mychannel
+#       ordererNode: orderer-sample-example-com
+#       peerNode: peer-sample-example-com
+#
+# envelopeFile indicate the envolope file which should have been signed
+# by enough of orgs. That file has to be uploaded first and indicated by
+# this parameter.
+#
+# channelName is the channel name which will be updated.
+#
+# ordererNode is the orderer node used to send channel changes to.
+# this node can be an imported node, only needs its endpoint and
+# ca tls cert.
+#
+# peerNode is the peer node under which credential that the changes
+# will be made. It has to be a full node with all the signing and
+# private key certs available.
+
+- name: Show the passed in variable
+  debug:
+    var: action
+
+- name: Get variable with their names
+  set_fact:
+    envelopeFile: "{{ action.parameters.envelope_file }}"
+    channelName: "{{ action.parameters.channel_name }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+    peerNode: "{{ action.parameters.peer_node }}"
+
+- name: End the process if asset name was not provided
+  when: envelopeFile == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - new channel configuration json file {{ envelopeFile }} must be provided for channel changes'
+
+- name: Setup upload dir
+  set_fact:
+    targetdir: "{{ lookup('env','HOME') }}/agent/upload"
+
+- name: Make sure that target directory exists
+  file:
+    path: '{{ targetdir }}'
+    state: 'directory'
+    mode: 0775
+
+- name: Check if the new configuration file exists
+  stat:
+    path: '{{ targetdir }}/{{ envelopeFile }}'
+  register: configfile
+
+- name: End the process when new configuration file does not exist
+  when: not configfile.stat.exists
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - envolope file {{ envelopeFile }} must be uploaded for channel update'
+
+- name: Get envolope file
+  copy:
+    src: '{{ targetdir }}/{{ envelopeFile }}'
+    dest: '{{ agentworkdir }}/{{ channelName }}_update_envelope.pb' 
+
+# Now we get the orderer node info from either nodecert or node asset
+- name: Get orderer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ ordererNode }}"
+
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
+
+- name: Get core yaml files
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}'
+
+- name: 'Update the channel configuration for channel {{ channelName }}'
+  ansible.builtin.shell: |
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
+    export CORE_PEER_TLS_ENABLED=true
+    export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+    export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+    {{ bindir }}/bin/peer channel update -f {{ channelName }}_update_envelope.pb \
+    -c {{ channelName }} --tls -o {{ ordererid.endpoint }} \
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+  args:
+    chdir: '{{ agentworkdir }}'
+    executable: /bin/bash
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Update the resource status
+  when: cmdresult.rc != 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: "Failed - Channel Update. {{ cmdresult.stderr }}"
+
+- name: Get the pod name
+  set_fact:
+    podname: "{{ lookup('env', 'HOSTNAME') }}"
+    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
+
+- name: Update the crd status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded - Channel update'

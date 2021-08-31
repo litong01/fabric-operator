@@ -17,7 +17,7 @@ RUN mkdir -p /etc/ansible \
 
 RUN yum clean all && rm -rf /var/cache/yum/* \
   && yum update -y \
-  && yum install -y unzip tar python38-pip python38-setuptools \
+  && yum install -y unzip tar python38-pip python38-setuptools jq \
   && pip3 install --upgrade pip~=21.1.0 \
   && pip3 install pipenv==2020.11.15 \
   && pipenv install --deploy \
@@ -57,5 +57,6 @@ COPY utilities/downloader/ ${HOME}/downloader/
 COPY test.yaml ${HOME}/test.yaml
 WORKDIR ${HOME}
 USER ${USER_UID}
+RUN mkdir -p ${HOME}/agent/upload ${HOME}/agent/download
 
 ENTRYPOINT ["/tini", "--", "/usr/local/bin/ansible-operator", "run", "--watches-file=./watches.yaml"]
