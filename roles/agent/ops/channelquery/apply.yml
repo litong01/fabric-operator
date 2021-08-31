@@ -77,18 +77,9 @@
   vars:
     RESULT_MSG: "Failed - Channel Query {{ cmdresult.stderr }}"
 
-- name: Setup destination dir
-  set_fact:
-    agentrootdir: "{{ lookup('env','HOME') }}/agent"
-
-- name: Get the pod name
-  set_fact:
-    podname: "{{ lookup('env', 'HOSTNAME') }}"
-    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
-
 - name: Update the resource status
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
     RESULT_MSG: 'Succeeded - Channel Query'
     DOWNLOAD_MSG: >-
-      kubectl cp -n {{ controllerns }} -c manager {{ podname }}:{{ agentrootdir }}/download/{{ channelName}}_config.json
+      kubectl cp -n {{ controllerns }} -c manager {{ podname }}:{{ downloaddir }}/{{ channelName}}_config.json

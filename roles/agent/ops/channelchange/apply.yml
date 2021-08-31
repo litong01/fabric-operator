@@ -3,17 +3,17 @@
 # spec:
 #   organization: example.com
 #   actions:
-#   - name: channelupdate
-#     description: commit a channel update after a channel changes have been signed off by enough orgs
+#   - name: channelchange
+#     description: create channel change envolope for signing
 #     parameters:
-#       envelopeFile: mychannel_update_envelope.pb
+#       newconfig: config_block.json
 #       channelName: mychannel
 #       ordererNode: orderer-sample-example-com
 #       peerNode: peer-sample-example-com
 #
-# envelopeFile indicate the envolope file which should have been signed
-# by enough of orgs. That file has to be uploaded first and indicated by
-# this parameter.
+# newconfig indicate the desired channel configuration which must be
+# a full channel configuration json file. This file has to be uploaded
+# to the agent first
 #
 # channelName is the channel name which will be updated.
 #
@@ -31,32 +31,32 @@
 
 - name: Get variable with their names
   set_fact:
-    envelopeFile: "{{ action.parameters.envelope_file }}"
+    newconfig: "{{ action.parameters.newconfig }}"
     channelName: "{{ action.parameters.channel_name }}"
     ordererNode: "{{ action.parameters.orderer_node }}"
     peerNode: "{{ action.parameters.peer_node }}"
 
 - name: End the process if asset name was not provided
-  when: envelopeFile == ''
+  when: newconfig == ''
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Failed - envelope file {{ envelopeFile }} must be provided for channel update'
+    RESULT_MSG: 'Failed - new channel configuration json file {{ newconfig }} must be provided for channel changes'
 
-- name: Check if the envelope file exists
+- name: Check if the new configuration file exists
   stat:
-    path: '{{ uploaddir }}/{{ envelopeFile }}'
+    path: '{{ uploaddir }}/{{ newconfig }}'
   register: configfile
 
-- name: End the process when envelope file does not exist
+- name: End the process when new configuration file does not exist
   when: not configfile.stat.exists
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Failed - envolope file {{ envelopeFile }} must be uploaded for channel update'
+    RESULT_MSG: 'Failed - new channel configuration json file {{ newconfig }} must be uploaded for channel changes'
 
-- name: Get envolope file
+- name: Get new configuration json file
   copy:
-    src: '{{ uploaddir }}/{{ envelopeFile }}'
-    dest: '{{ agentworkdir }}/{{ channelName }}_update_envelope.pb' 
+    src: '{{ uploaddir }}/{{ newconfig }}'
+    dest: '{{ agentworkdir }}/{{ channelName }}_config.json' 
 
 # Now we get the orderer node info from either nodecert or node asset
 - name: Get orderer node info
@@ -82,26 +82,28 @@
     src: '{{ bindir }}/config'
     dest: '{{ agentworkdir }}'
 
-- name: 'Update the configuration for channel {{ channelName }}'
-  ansible.builtin.shell: |
-    export FABRIC_CFG_PATH={{ agentworkdir }}/config
-    export CORE_PEER_TLS_ENABLED=true
-    export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
-    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
-    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
-    export CORE_PEER_ADDRESS={{ peerid.endpoint }}
-    {{ bindir }}/bin/peer channel update -f {{ channelName }}_update_envelope.pb \
-    -c {{ channelName }} --tls -o {{ ordererid.endpoint }} \
-    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+- name: Generate the signoff script
+  template:
+    src: "{{ role_path }}/ops/channelchange/templates/process.j2"
+    dest: "{{ agentworkdir }}/process.sh"
+    mode: +x
+
+- name: Sign off the changes
+  ansible.builtin.command: "{{ agentworkdir }}/process.sh"
   args:
     chdir: '{{ agentworkdir }}'
-    executable: /bin/bash
   register: cmdresult
   ignore_errors: yes
 
 - name: Update the resource status
+  when: cmdresult.rc != 0
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: >-
-      {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel Update',
-         'Failed - Channel Update. '+cmdresult.stderr ) }}
+    RESULT_MSG: "Failed - Channel Change. {{ cmdresult.stderr }}"
+
+- name: Update the crd status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded - Channel Change'
+    DOWNLOAD_MSG: >-
+      kubectl cp -n {{ controllerns }} -c manager {{ podname }}:{{ downloaddir }}/{{ channelName }}_update_envelope.pb

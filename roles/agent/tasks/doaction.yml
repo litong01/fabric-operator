@@ -13,9 +13,13 @@
   - absent
   - directory
 
+- name: "Start action {{ action.name }}"
+  debug:
+    var: action.parameters
+
 - name: Execute the action
   include_tasks: '{{ role_path }}/ops/{{ action.name }}/apply.yml'
 
-- name: Cleanup after the action
+- name: Post action
   debug:
-    msg: 'This is after the action'
+    msg: 'Action {{ action.name }} is now finished'

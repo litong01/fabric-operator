@@ -5,10 +5,10 @@ metadata:
 spec:
   organization: example.com
   actions:
-  - name: channelsignoff
-    description: sign off channel configuration changes
+  - name: channelchange
+    description: create channel change envelope for signing
     parameters:
-      envelopeFile: mychannel_update_envelope.pb
+      newconfig: mychannel_config.json
       channelName: mychannel
       ordererNode: orderer-sample-example-com
       peerNode: peer-sample-example-com

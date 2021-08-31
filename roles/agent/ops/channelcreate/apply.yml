@@ -21,7 +21,7 @@
   set_fact:
     channelName: "{{ action.parameters.channel_name }}"
     ordererNode: "{{ action.parameters.orderer_node }}"
-    additionalOrgs: "{{ action.parameters.additional_orgs }}"
+    additionalOrgs: "{{ action.parameters.additional_orgs | default([]) }}"
 
 - name: End the process if either variable is empty
   when: channelName == '' or ordererNode == ''
@@ -92,4 +92,4 @@
   vars:
     RESULT_MSG: >-
       {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel '+channelName+' was created',
-         'Failed - '+cmdresult.stderr) }}
+         'Failed - Channel Create. '+cmdresult.stderr) }}

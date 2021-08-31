@@ -98,13 +98,9 @@
   register: cmdresult
   ignore_errors: yes
 
-- name: Get the pod name
-  set_fact:
-    podname: "{{ lookup('env', 'HOSTNAME') }}"
-    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
-
 - name: Update the resource status
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
     RESULT_MSG: >-
-      {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel join', 'Failed - '+cmdresult.stderr) }}
+      {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel join',
+         'Failed - Channel Join. '+cmdresult.stderr ) }}

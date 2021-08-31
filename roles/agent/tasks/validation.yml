@@ -30,6 +30,10 @@
     bindir: "{{ lookup('env','HOME') }}/agent/{{ release }}"
     workdir: "{{ lookup('env','HOME') }}/agent/{{ 99999999 | random | to_uuid }}"
     orgid: "{{ organization | replace('.', '-') }}"
+    uploaddir: "{{ lookup('env','HOME') }}/agent/upload"
+    downloaddir: "{{ lookup('env','HOME') }}/agent/download"
+    podname: "{{ lookup('env', 'HOSTNAME') }}"
+    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
 
 - name: Setup action working directory
   set_fact:
@@ -37,6 +41,3 @@
       {{ tactions|default([]) +
          [ item | combine({'aworkdir':((item|to_nice_json|hash('sha256')))[:16]}) ] }}
   with_items: "{{ actions }}"
-
-- debug:
-    var: tactions

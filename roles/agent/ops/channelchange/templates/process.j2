@@ -42,9 +42,6 @@ echo '{"payload":{"header":{"channel_header":{"channel_id":"{{ channelName }}", 
 {{ bindir }}/bin/configtxlator proto_encode --input {{ channelName }}_update_envelope.json \
   --type common.Envelope --output {{ channelName }}_update_envelope.pb
 
-# 9. Need to sign channel update envelope by each org admin
-{{ bindir }}/bin/peer channel signconfigtx -f {{ channelName }}_update_envelope.pb
-
-#10. Copy the envelope file to both upload and download directory for further process
-cp {{ channelName }}_update_envelope.pb ~/agent/upload
-cp {{ channelName }}_update_envelope.pb ~/agent/download
+# 9. Copy the envelope file to both upload and download directory for further process
+cp {{ channelName }}_update_envelope.pb {{ uploaddir }}
+cp {{ channelName }}_update_envelope.pb {{ downloaddir }}

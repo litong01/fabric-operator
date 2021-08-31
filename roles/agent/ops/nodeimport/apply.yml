@@ -12,10 +12,6 @@
 #  this file must be uploaded to the controller prior executing this
 #  command.
 
-- name: Show the passed in variable
-  debug:
-    var: action
-
 - name: Get variable with their names
   set_fact:
     assetname: "{{ action.parameters.assetname }}"
@@ -26,24 +22,9 @@
   vars:
     RESULT_MSG: 'Failed - asset zip file name must be provided for node import'
 
-- name: Setup upload dir
-  set_fact:
-    targetdir: "{{ lookup('env','HOME') }}/agent/upload"
-
-- name: Make sure that asset target directory exists
-  file:
-    path: '{{ targetdir }}'
-    state: 'directory'
-    mode: 0775
-
-- name: Get the pod name
-  set_fact:
-    podname: "{{ lookup('env', 'HOSTNAME') }}"
-    controllerns: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
-
 - name: Check if the indicated file exists
   stat:
-    path: '{{ targetdir }}/{{ assetname }}'
+    path: '{{ uploaddir }}/{{ assetname }}'
   register: assetfile
 
 - name: End the process if file does not exist
@@ -53,11 +34,11 @@
     RESULT_MSG: 'Failed - asset zip file does not exist, upload first'
     UPLOADLOAD_MSG: >-
       kubectl cp {{ assetname }} -n {{ controllerns }} -c manager
-      {{ podname }}:{{ targetdir }}/{{ assetname }}
+      {{ podname }}:{{ uploaddir }}/{{ assetname }}
 
 - name: Unpackage all the assets to the work directory
   unarchive:
-    src: '{{ targetdir }}/{{ assetname }}'
+    src: '{{ uploaddir }}/{{ assetname }}'
     dest: "{{ agentworkdir }}"
 
 - name: Recursively find all the asset files
