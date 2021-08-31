@@ -33,9 +33,9 @@
     dest: '{{ agentworkdir }}/{{ nodeid }}/{{ item.dest }}'
   with_items:
   - "{{ { 'src': assetobj.root_certs[0],      'dest': 'msp/cacerts/ca.pem'} }}"
-  - "{{ { 'src': assetobj.admins[0],      'dest': 'msp/signcerts/user.crt'} }}"
-  - "{{ { 'src': assetobj.root_certs[0],   'dest': 'msp/tlscacerts/ca.crt'} }}"
-  - "{{ { 'src': assetobj.tls_root_certs[0],   'dest': 'tls/ca.crt'} }}"
+  - "{{ { 'src': assetobj.admins[0],          'dest': 'msp/signcerts/user.crt'} }}"
+  - "{{ { 'src': assetobj.root_certs[0],      'dest': 'msp/tlscacerts/ca.crt'} }}"
+  - "{{ { 'src': assetobj.tls_root_certs[0],  'dest': 'tls/ca.crt'} }}"
 
 - name: Process orderer and peer data
   when: assetobj.type in ('fabric-orderer', 'fabric-peer')
