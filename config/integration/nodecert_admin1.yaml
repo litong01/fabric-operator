@@ -1,7 +1,7 @@
 apiVersion: operator.fabric.hyperledger.org/v1alpha1
 kind: Nodecert
 metadata:
-  name: admin01-sample
+  name: admin1
 spec:
   # Add fields here
   organization: example.com

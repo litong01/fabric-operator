@@ -1,13 +1,13 @@
 apiVersion: operator.fabric.hyperledger.org/v1alpha1
 kind: Agent
 metadata:
-  name: agent-sample
+  name: agent-channel-query
 spec:
   organization: example.com
-  nodeCert: admin01-sample
+  nodeCert: admin1
   actions:
   - name: channelquery
     description: query channel configuration
     parameters:
       channelName: mychannel
-      ordererNode: orderer-sample
+      ordererNode: orderer1
