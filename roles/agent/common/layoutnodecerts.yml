@@ -31,8 +31,8 @@
   with_items:
   - "{{ { 'src': 'admin.crt',   'dest': 'msp/admincerts/admin.pem'} }}"
   - "{{ { 'src': 'ca.crt',      'dest': 'msp/cacerts/ca.pem'} }}"
-  - "{{ { 'src': 'server.crt',  'dest': 'msp/signcerts/user.crt'} }}"
-  - "{{ { 'src': 'server.key',  'dest': 'msp/keystore/prive_sk'} }}"
+  - "{{ { 'src': 'admin.crt',   'dest': 'msp/signcerts/user.crt'} }}"
+  - "{{ { 'src': 'admin.key',   'dest': 'msp/keystore/prive_sk'} }}"
   - "{{ { 'src': 'tlsca.crt',   'dest': 'msp/tlscacerts/ca.crt'} }}"
   - "{{ { 'src': 'tlsca.crt',   'dest': 'tls/ca.crt'} }}"
   - "{{ { 'src': 'tls.crt',     'dest': 'tls/client.crt'} }}"
