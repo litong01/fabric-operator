@@ -1,0 +1,53 @@
+#!/bin/bash
+# we will exit whenever there is an error
+set -e
+
+#1. Setup environment variables and get the current channel configuration
+export FABRIC_CFG_PATH={{ agentworkdir }}/config
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+
+{{ bindir }}/bin/peer channel fetch config config_block.bk \
+  --tls -c {{ channelName }} -o {{ ordererid.endpoint }} \
+  --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+
+# 2. Translate the configuration into json format
+{{ bindir }}/bin/configtxlator proto_decode --input config_block.bk --type common.Block \
+  | jq .data.data[0].payload.data.config > {{ channelName }}_current_config.json
+
+# 3. Translate the current config in json format to protobuf format
+{{ bindir }}/bin/configtxlator proto_encode --input {{ channelName }}_current_config.json \
+  --type common.Config --output config.pb
+
+# 4. Produce the desired config in json format with new configuration added
+jq -s '.[0] * {"channel_group":{"groups":{"Application":{"groups": {(.[1].values.MSP.value.config.name): .[1]}}}}}' \
+  {{ channelName }}_current_config.json raw_config.json | \
+  jq -s '.[0] * {"channel_group":{"groups":{"Application":{"version": (.[0].channel_group.groups.Application.version|tonumber + 1)|tostring }}}}' \
+  > {{ channelName }}_desired_config.json
+
+# 5. Translate the desired config in json format to protobuf format
+{{ bindir }}/bin/configtxlator proto_encode --input {{ channelName }}_desired_config.json \
+  --type common.Config --output desired_config.pb
+
+# 6. Calculate the delta of the current config and desired config
+{{ bindir }}/bin/configtxlator compute_update --channel_id {{ channelName }} \
+  --original config.pb --updated desired_config.pb \
+  --output {{ channelName }}_update.pb
+
+# 7. Decode the delta of the config to json format
+{{ bindir }}/bin/configtxlator proto_decode --input {{ channelName }}_update.pb \
+  --type common.ConfigUpdate | jq . > {{ channelName }}_update.json
+
+# 8. Now wrap of the delta config to fabric envelop block
+echo '{"payload":{"header":{"channel_header":{"channel_id":"{{ channelName }}", "type":2}},"data":{"config_update":'$(cat {{channelName}}_update.json)'}}}' | jq . > {{channelName}}_update_envelope.json
+
+# 9. Encode the json format into protobuf format
+{{ bindir }}/bin/configtxlator proto_encode --input {{ channelName }}_update_envelope.json \
+  --type common.Envelope --output {{ channelName }}_update_envelope.pb
+
+#10. Copy the envelope file to both upload and download directory for further process
+cp {{ channelName }}_update_envelope.pb {{ uploaddir }}
+cp {{ channelName }}_update_envelope.pb {{ downloaddir }}

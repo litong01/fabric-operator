@@ -10,7 +10,7 @@
           "identities": [
             {
               "principal": {
-                "msp_identifier": "{{ consoleasset.msp_id }}",
+                "msp_identifier": "{{ neworgmspid }}",
                 "role": "ADMIN"
               },
               "principal_classification": "ROLE"
@@ -39,7 +39,7 @@
           "identities": [
             {
               "principal": {
-                "msp_identifier": "{{ consoleasset.msp_id }}",
+                "msp_identifier": "{{ neworgmspid }}",
                 "role": "PEER"
               },
               "principal_classification": "ROLE"
@@ -68,21 +68,21 @@
           "identities": [
             {
               "principal": {
-                "msp_identifier": "{{ consoleasset.msp_id }}",
+                "msp_identifier": "{{ neworgmspid }}",
                 "role": "ADMIN"
               },
               "principal_classification": "ROLE"
             },
             {
               "principal": {
-                "msp_identifier": "{{ consoleasset.msp_id }}",
+                "msp_identifier": "{{ neworgmspid }}",
                 "role": "PEER"
               },
               "principal_classification": "ROLE"
             },
             {
               "principal": {
-                "msp_identifier": "{{ consoleasset.msp_id }}",
+                "msp_identifier": "{{ neworgmspid }}",
                 "role": "CLIENT"
               },
               "principal_classification": "ROLE"
@@ -117,14 +117,14 @@
           "identities": [
             {
               "principal": {
-                "msp_identifier": "{{ consoleasset.msp_id }}",
+                "msp_identifier": "{{ neworgmspid }}",
                 "role": "ADMIN"
               },
               "principal_classification": "ROLE"
             },
             {
               "principal": {
-                "msp_identifier": "{{ consoleasset.msp_id }}",
+                "msp_identifier": "{{ neworgmspid }}",
                 "role": "CLIENT"
               },
               "principal_classification": "ROLE"
@@ -155,7 +155,7 @@
       "value": {
         "config": {
           "admins": [
-            "{{ consoleasset.admins[0] }}"
+            "{{ ADMIN_CERT }}"
           ],
           "crypto_config": {
             "identity_identifier_hash_function": "SHA256",
@@ -163,34 +163,34 @@
           },
           "fabric_node_ous": {
             "admin_ou_identifier": {
-              "certificate": "{{ consoleasset.root_certs[0] }}",
+              "certificate": "{{ CA_CERT }}",
               "organizational_unit_identifier": "admin"
             },
             "client_ou_identifier": {
-              "certificate": "{{ consoleasset.root_certs[0] }}",
+              "certificate": "{{ CA_CERT }}",
               "organizational_unit_identifier": "client"
             },
             "enable": true,
             "orderer_ou_identifier": {
-              "certificate": "{{ consoleasset.root_certs[0] }}",
+              "certificate": "{{ CA_CERT }}",
               "organizational_unit_identifier": "orderer"
             },
             "peer_ou_identifier": {
-              "certificate": "{{ consoleasset.root_certs[0] }}",
+              "certificate": "{{ CA_CERT }}",
               "organizational_unit_identifier": "peer"
             }
           },
           "intermediate_certs": [],
-          "name": "{{ consoleasset.msp_id }}",
+          "name": "org0-example-com",
           "organizational_unit_identifiers": [],
           "revocation_list": [],
           "root_certs": [
-            "{{ consoleasset.root_certs[0] }}"
+            "{{ CA_CERT }}"
           ],
           "signing_identity": null,
           "tls_intermediate_certs": [],
           "tls_root_certs": [
-            "{{ consoleasset.tls_root_certs[0] }}"
+            "{{ CA_TLS_CERT }}"
           ]
         },
         "type": 0

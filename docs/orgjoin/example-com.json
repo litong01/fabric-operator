@@ -1,0 +1,33 @@
+{
+  "display_name": "example.com MSP",
+  "msp_id": "example-com",
+  "name": "example.com MSP",
+  "type": "msp",
+  "admins": [],
+  "root_certs": [
+    "base64 encoded root cert here"
+  ],
+  "tls_root_certs": [
+    "base64 encoded tls root cert"
+  ],
+  "fabric_node_ous": {
+    "admin_ou_identifier": {
+      "certificate": "admin ou cert",
+      "organizational_unit_identifier": "admin"
+    },
+    "client_ou_identifier": {
+      "certificate": "client ou cert",
+      "organizational_unit_identifier": "client"
+    },
+    "enable": true,
+    "orderer_ou_identifier": {
+      "certificate": "orderer ou cert",
+      "organizational_unit_identifier": "orderer"
+    },
+    "peer_ou_identifier": {
+      "certificate": "peer ou cert",
+      "organizational_unit_identifier": "peer"
+    }
+  },
+  "host_url": "http://localhost:3000"
+}

@@ -40,7 +40,7 @@
   when: newconfig == ''
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Failed - new channel configuration json file {{ newconfig }} must be provided for channel changes'
+    RESULT_MSG: 'Failed - new channel configuration json file must be provided for channel changes'
 
 - name: Check if the new configuration file exists
   stat:

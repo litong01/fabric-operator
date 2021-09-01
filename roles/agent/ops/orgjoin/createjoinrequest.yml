@@ -1,0 +1,21 @@
+# This module takes a variable named consoleasset
+# that name comes from the operation console asset format
+# the data structure is described in docs/orgjoin/example-com.json
+# which is actually msp file
+
+- name: Validate the following important fields in the passed in object
+  when: >-
+    (consoleasset.msp_id|default('')) == '' or
+    consoleasset.type != 'msp' or
+    (consoleasset.admins|default([])|length) == 0 or
+    (consoleasset.tls_root_certs|default([])|length) == 0
+    (consoleasset.root_certs|default([])|length) == 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - asset file does not have necessary information'
+
+- name: Produce the raw org join request json file
+  template:
+    src: "{{ role_path }}/ops/orgjoin/templates/joinreq.j2"
+    dest: "{{ agentworkdir }}/raw_config.json"
+

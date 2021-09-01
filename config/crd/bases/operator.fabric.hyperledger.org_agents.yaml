@@ -42,3 +42,8 @@ spec:
     storage: true
     subresources:
       status: {}
+#     additionalPrinterColumns:
+#     - name: Result
+#       type: string
+#       description: The result of the agent last action
+#       jsonPath: .status.conditions[0].result

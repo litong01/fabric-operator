@@ -40,7 +40,7 @@
   when: envelopeFile == ''
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Failed - the envelope file {{ envelopeFile }} must be provided for signing off'
+    RESULT_MSG: 'Failed - the envelope file must be provided for signing off'
 
 - name: Check if the envelope file exists
   stat:

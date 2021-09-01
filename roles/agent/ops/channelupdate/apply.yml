@@ -40,7 +40,7 @@
   when: envelopeFile == ''
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Failed - envelope file {{ envelopeFile }} must be provided for channel update'
+    RESULT_MSG: 'Failed - envelope file must be provided for channel update'
 
 - name: Check if the envelope file exists
   stat:

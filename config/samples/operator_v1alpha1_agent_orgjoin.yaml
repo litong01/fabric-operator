@@ -4,11 +4,11 @@ metadata:
   name: agent-sample
 spec:
   organization: example.com
-  nodeCert: admin01-sample
   actions:
   - name: orgjoin
-    description: query channel configuration
+    description: produce channel update envelope for new org to join a channel
     parameters:
+      mspAsset: neworg.json
       channelName: mychannel
-      orderer: orderer-sample
-      newOrgAdminNodeCert: admin01-sample-org0-example-com-nodecert
+      ordererNode: orderer-sample-example-com
+      peerNode: peer-sample-example-com

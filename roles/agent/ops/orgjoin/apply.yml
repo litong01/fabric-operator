@@ -1,33 +1,174 @@
-# To create a new channel, an action must look like this
+# To import external nodes into your clusters
 #
-# - name: channeljoin
-#   description: join a channel
-#   parameters:  
-#     channelName: mychannel
-#     ordererNode: orderer-sample
-#     newOrgAdminNodeCert: admin01-org0-example-com-nodecert
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: orgjoin
+#     description: create channel change envolope with new org information
+#     parameters:
+#       mspAsset: neworg.json
+#       channelName: mychannel
+#       ordererNode: orderer-sample-example-com
+#       peerNode: peer-sample-example-com
 #
+# mspAsset indicate the new organization asset which normally can be
+# exported using assetgen agent. This asset can be either uploaded
+# to the agent upload directory or an asset name which may have
+# been imported by using node import agent. Either it is uploaded or
+# use the asset secret, the file must contain the following pieces of
+# information about the new org:
+#     1. admin cert
+#     2. root cert
+#     3. root tls cert
+#     4. msp id
+#
+# channelName is the channel name which the new org will join.
+#
+# ordererNode is the orderer node used to query channel config from.
+# this node can be an imported node, only needs its endpoint and
+# ca tls cert.
+#
+# peerNode is the peer node under which credential that the changes
+# will be made. It has to be a full node with all the signing and
+# private key certs available.
+#
+# IMPORTANT:
+# This module really just produce a channel update envelope, the envelople
+# must be passed around to different organization for signing, after enough
+# of organization signed off, then one organization will need to run
+# channelupdate to commit the changes to the channel. Here are the sequence
+# of these actions to be performed
+#
+#    1. orgjoin
+#    2. channelsignoff by multiple organizations
+#    3. channelupdate
 
-- name: Show the passed in variable
-  debug:
-    var: action
+- name: Get variable with their names
+  set_fact:
+    mspAsset: "{{ action.parameters.msp_asset }}"
+    channelName: "{{ action.parameters.channel_name }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+    peerNode: "{{ action.parameters.peer_node }}"
 
-# Now we get the nodecert under which the operation is performed
-- name: Get user info
-  include_tasks: '{{ role_path }}/common/getuserinfo.yml'
+- name: End the process if asset name was not provided
+  when: mspAsset == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - The asset id must be provided for adding a new organization'
+
+- name: Check if the asset file exists
+  stat:
+    path: '{{ uploaddir }}/{{ mspAsset }}'
+  register: configfile
+
+# Process the uploaded file
+- name: Process the uploaded file
+  when: configfile.stat.exists
+  block:
+  - name: Get new org json file
+    copy:
+      src: '{{ uploaddir }}/{{ mspAsset }}'
+      dest: '{{ agentworkdir }}/raw_config.json' 
+
+  - name: Load the file
+    set_fact:
+      theasset: "{{ lookup('file', agentworkdir+'/raw_config.json') | from_json }}"
+    register: cmdresult
+    ignore_errors: yes
+    no_log: True
+
+  - name: Update the crd status to fail
+    when: cmdresult.failed == True
+    include_tasks: '{{ role_path }}/common/endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - Org Join, file is not a valid json file'
+
+  - name: Check if the asset is a Org Request file or just an asset file
+    set_fact:
+      isOrgRequest: "{{ (theasset.values is defined)|ternary(True, False) }}"
+      isAsset: "{{ (theasset.fabric_node_ous is defined)|ternary(True, False) }}"
+
+  - name: Update the crd status to fail
+    when: (isOrgRequest and isAsset) or (isOrgRequest==False and isAsset==False)
+    include_tasks: '{{ role_path }}/common/endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - Org Join, the asset file may have been in a wrong format'
+
+  - name: Produce Join Request file from the asset
+    when: isAsset == True
+    include_tasks: 'createjoinrequest.yml'
+    vars:
+      consoleasset: "{{ theasset }}"
+
+# Try the asset if there is no uploaded asset file
+- name: Process the asset
+  when: not configfile.stat.exists
+  block:
+  - name: Try to locate asset
+    community.kubernetes.k8s_info:
+      kind: Secret
+      api_version: v1
+      name: '{{ mspAsset }}-asset'
+      namespace: '{{ ansible_operator_meta.namespace }}'
+    register: asset_secret
+
+  - name: Update the crd status to fail
+    when: (asset_secret.resources|length) == 0
+    include_tasks: '{{ role_path }}/common/endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - can not find {{ mspAsset }}-asset'
+
+  - name: Produce Join Request file from the asset
+    include_tasks: 'createjoinrequest.yml'
+    vars:
+      consoleasset: "{{ asset_secret.resources[0].data.asset | b64decode | from_json }}"
 
 # Now we get the orderer node info from either nodecert or node asset
-- name: Get node info
+- name: Get orderer node info
   include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
 
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
+
 - name: Get core yaml files
   copy:
     src: '{{ bindir }}/config'
-    dest: '{{ agentworkdir }}' 
+    dest: '{{ agentworkdir }}'
 
-- name: Now generate the Peer asset for organization
+- name: Generate the script to produce the envolope
   template:
-    src: "{{ role_path }}/ops/orgjoin/templates/script.j2"
-    dest: "{{ agentworkdir }}/run.sh"
+    src: "{{ role_path }}/ops/orgjoin/templates/process.j2"
+    dest: "{{ agentworkdir }}/process.sh"
+    mode: +x
+
+- name: Run the script to create the envolope
+  ansible.builtin.command: "{{ agentworkdir }}/process.sh"
+  args:
+    chdir: '{{ agentworkdir }}'
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Update the resource status
+  when: cmdresult.rc != 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: "Failed - Org Join. {{ cmdresult.stderr }}"
+
+- name: Update the crd status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Succeeded - Org Join'
+    DOWNLOAD_MSG: >-
+      kubectl cp -n {{ controllerns }} -c manager {{ podname }}:{{ downloaddir }}/{{ channelName }}_update_envelope.pb
