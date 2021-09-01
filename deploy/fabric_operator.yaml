@@ -688,7 +688,7 @@ spec:
         - name: MAX_CONCURRENT_RECONCILES_CONSOLE_OPERATOR_FABRIC_HYPERLEDGER_ORG
           value: "1"
         image: email4tong/fabricop:v1.0.0
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         livenessProbe:
           httpGet:
             path: /healthz
