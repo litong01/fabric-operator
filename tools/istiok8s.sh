@@ -13,10 +13,10 @@ Green='\033[0;32m'        # Green
 
 rm -rf ~/.kube/*
 
-kind create cluster
+kind create cluster $@
 
-# The following procedure is to setup load balancer
-kubectl cluster-info --context kind-kind
+# set up context
+kubectl cluster-info --context kind-${2:-kind} $3 $4
 
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml
 kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"

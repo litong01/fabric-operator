@@ -11,10 +11,11 @@ Green='\033[0;32m'        # Green
 
 rm -rf ~/.kube/*
 
-kind create cluster
+kind create cluster $@
 
 # set up context
-kubectl cluster-info --context kind-kind
+# kubectl cluster-info --context kind-kind
+kubectl cluster-info --context kind-${2:-kind} $3 $4
 
 # The following procedure is to setup load balancer
 kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml

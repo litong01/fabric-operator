@@ -189,3 +189,23 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+# Define molecule test
+test: SHELL:=/bin/bash
+MOLECULE_PROJECT_DIRECTORY := $(shell pwd)
+test: ##
+	@{ \
+	export MOLECULE_PROJECT_DIRECTORY=${MOLECULE_PROJECT_DIRECTORY}; \
+	export KUSTOMIZE_PATH=${MOLECULE_PROJECT_DIRECTORY}/bin/kustomize; \
+	export MOLECULE_EPHEMERAL_DIRECTORY=${MOLECULE_PROJECT_DIRECTORY}/build; \
+	export K8S_AUTH_KUBECONFIG=${MOLECULE_PROJECT_DIRECTORY}/build/kubeconfig; \
+	export KUBECONFIG=${MOLECULE_PROJECT_DIRECTORY}/build/kubeconfig; \
+	export OPERATOR_IMAGE=${IMG}; \
+	echo 'Project root directory: '${MOLECULE_PROJECT_DIRECTORY}; \
+	echo 'Image: '${IMG}; \
+	set -e ;\
+	mkdir -p ${MOLECULE_PROJECT_DIRECTORY}/build; \
+	mol cleanup -s kind; \
+	mol destroy -s kind; \
+	mol converge -s kind; \
+	}

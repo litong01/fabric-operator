@@ -12,7 +12,12 @@
         api_version: v1
         kind: Namespace
         name: '{{ namespace }}'
+        kubeconfig: '{{ kubeconfig }}'
 
     - import_tasks: kustomize.yml
+      vars:
+        state: present
+
+    - import_tasks: tasks/ca_test.yml
       vars:
         state: present
