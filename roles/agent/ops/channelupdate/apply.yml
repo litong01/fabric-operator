@@ -25,10 +25,6 @@
 # will be made. It has to be a full node with all the signing and
 # private key certs available.
 
-- name: Show the passed in variable
-  debug:
-    var: action
-
 - name: Get variable with their names
   set_fact:
     envelopeFile: "{{ action.parameters.envelope_file }}"
@@ -52,6 +48,9 @@
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - envolope file {{ envelopeFile }} must be uploaded for channel update'
+
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
 
 - name: Get envolope file
   copy:

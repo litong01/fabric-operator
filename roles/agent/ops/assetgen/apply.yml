@@ -23,6 +23,9 @@
   vars:
     RESULT_MSG: 'Failed - no assets to be exported'
 
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
 - name: Filter out the invalid items
   set_fact:
     alltypes: "{{ (alltypes|default([])) + [item] }}"
@@ -44,7 +47,7 @@
 - name: Update the crd status
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
-    RESULT_MSG: 'Succeeded'
+    RESULT_MSG: 'Succeeded - Asset Generation'
     DOWNLOAD_MSG: >-
       kubectl cp -n {{ controllerns }} -c manager
       {{ podname }}:{{ downloaddir }}/{{ orgid }}-assets.zip

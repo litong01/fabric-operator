@@ -1,22 +1,19 @@
-# This module update the agent status with 3 parameters
-#   RESTYPE
-# If RESTYPE is not provided, Agent resource is assumed
-
+# This module update the agent with start status
 # Do this when we start a resource
+
 - name: Update agent status
   operator_sdk.util.k8s_status:
     api_version: operator.fabric.hyperledger.org/v1alpha1
-    kind: "{{ RESTYPE | default('Agent') }}"
+    kind: Agent
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
-      result: ""
       download: ""
       upload: ""
     conditions:
       - type: Running
-        status: "False"
-        reason: "Started"
-        message: "Resource is starting"
+        status: "Running"
+        reason: "Running"
+        message: "Agent is starting"
         lastTransitionTime: "{{ lookup('pipe', 'date --rfc-3339 seconds') }}"
 

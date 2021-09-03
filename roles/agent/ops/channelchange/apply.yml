@@ -53,6 +53,9 @@
   vars:
     RESULT_MSG: 'Failed - new channel configuration json file {{ newconfig }} must be uploaded for channel changes'
 
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
 - name: Get new configuration json file
   copy:
     src: '{{ uploaddir }}/{{ newconfig }}'

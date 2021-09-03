@@ -56,6 +56,9 @@
   vars:
     RESULT_MSG: 'Failed - The asset id must be provided for adding a new organization'
 
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
 - name: Check if the asset file exists
   stat:
     path: '{{ uploaddir }}/{{ mspAsset }}'

@@ -29,6 +29,9 @@
   vars:
     RESULT_MSG: 'Failed - Both channel name and orderer node must be provided'
 
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
 - name: Layout orderer node certs based on the secret
   include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
   vars:

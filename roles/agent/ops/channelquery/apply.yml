@@ -30,6 +30,9 @@
   vars:
     RESULT_MSG: 'Failed - Both channel name and orderer node must be provided'
 
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
 # Now we get the orderer node info from either nodecert or node asset
 - name: Get node info
   include_tasks: '{{ role_path }}/common/getnodeinfo.yml'

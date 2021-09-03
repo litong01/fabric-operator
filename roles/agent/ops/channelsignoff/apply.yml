@@ -53,6 +53,9 @@
   vars:
     RESULT_MSG: 'Failed - envelope file {{ envelopeFile }} must be uploaded for signing'
 
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
 - name: Get envelope file
   copy:
     src: '{{ uploaddir }}/{{ envelopeFile }}'

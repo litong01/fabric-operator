@@ -4,6 +4,11 @@
 #   UPLOAD_MSG
 # If DOWNLOAD_MSG or UPLOAD_MSG is not provided, empty value
 # is assume. If RESULT_MSG is not provide, Succeeded is assumed
+
+- name: Set success or fail flag
+  set_fact:
+    OK: "{{ RESULT_MSG is regex('^Succeeded*') }}"
+
 - name: Update agent status
   operator_sdk.util.k8s_status:
     api_version: operator.fabric.hyperledger.org/v1alpha1
@@ -11,10 +16,15 @@
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
-      result: "{{ RESULT_MSG | default('Succeeded') }}"
       download: "{{ DOWNLOAD_MSG | default('') }}"
       upload: "{{ UPLOADLOAD_MSG | default('') }}"
+    conditions:
+      - type: Running
+        status: "{{ OK | ternary(True, False) }}"
+        reason: "{{ OK | ternary('Successful', 'Failed') }}"
+        message: "{{ RESULT_MSG }}"
+        lastTransitionTime: "{{ lookup('pipe', 'date --rfc-3339 seconds') }}"
 
 - name: End the whole process if the msg is not Succeeded
-  when: RESULT_MSG is not regex('^Succeeded*')
+  when: not OK
   meta: end_play

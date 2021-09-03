@@ -36,6 +36,9 @@
       kubectl cp {{ assetname }} -n {{ controllerns }} -c manager
       {{ podname }}:{{ uploaddir }}/{{ assetname }}
 
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
 - name: Unpackage all the assets to the work directory
   unarchive:
     src: '{{ uploaddir }}/{{ assetname }}'
