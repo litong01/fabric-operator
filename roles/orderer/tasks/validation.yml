@@ -6,3 +6,4 @@
 - name: Set mspid
   set_fact:
     mspid: "{{ organization|replace('.', '-') }}"
+    ROOTDIR: "{{ lookup('env','HOME') }}"

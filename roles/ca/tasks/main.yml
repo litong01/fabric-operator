@@ -3,7 +3,7 @@
   include_tasks: "validation.yml"
 
 - name: Get NODE_HOSTNAME or NODE_IP info
-  include_tasks: "{{ role_path }}/../../playbooks/network/get-hostname.yml"
+  include_tasks: "{{ ROOTDIR }}/playbooks/network/get-hostname.yml"
 
 - name: Setup node name
   set_fact:
@@ -110,6 +110,23 @@
             containers:
             - name: fabric-ca
               image: 'hyperledger/fabric-ca:{{ release }}'
+              livenessProbe:
+                httpGet:
+                  path: /healthz
+                  port: 7055
+                failureThreshold: 1
+                periodSeconds: 10
+              readinessProbe:
+                initialDelaySeconds: 5
+                periodSeconds: 4
+                timeoutSeconds: 1
+                successThreshold: 1
+                failureThreshold: 1
+                httpGet:
+                  host:
+                  scheme: HTTP
+                  path: /healthz
+                  port: 7055
               imagePullPolicy: IfNotPresent
               env:
               - { name: "FABRIC_CA_SERVER_LOGLEVEL", value: "{{ log_level }}" }
@@ -154,7 +171,7 @@
 # The module included here will expose the target ports to outside of k8s cluster and
 # will return a list of ports for the target ports
 - name: Now expose CA service to outside of the k8s cluster
-  include_tasks: '{{ role_path }}/../../playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
 
 - name: Check if the ports exposed correctly
   fail:

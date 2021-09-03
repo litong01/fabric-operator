@@ -7,7 +7,7 @@
   include_tasks: "access.yml"
 
 - name: Get NODE_HOSTNAME or NODE_IP info
-  include_tasks: "{{ role_path }}/../../playbooks/network/get-hostname.yml"
+  include_tasks: "{{ ROOTDIR }}/playbooks/network/get-hostname.yml"
 
 - name: Get the home directory and setup node name
   set_fact:
@@ -93,7 +93,7 @@
 # The module included here will expose the target ports to outside of k8s cluster and
 # will return a list of ports for the target ports
 - name: Now expose Orderer service to outside of the k8s cluster
-  include_tasks: '{{ role_path }}/../../playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/network/{{ LB_TYPE|lower }}/apply.yml'
 
 - name: Check if the ports exposed correctly
   fail:
@@ -209,6 +209,23 @@
             - name: fabric-peer
               image: 'email4tong/fabricop:v1.0.0'
               imagePullPolicy: Always
+              livenessProbe:
+                httpGet:
+                  path: /healthz
+                  port: 7061
+                failureThreshold: 1
+                periodSeconds: 10
+              readinessProbe:
+                initialDelaySeconds: 5
+                periodSeconds: 4
+                timeoutSeconds: 1
+                successThreshold: 1
+                failureThreshold: 1
+                httpGet:
+                  host:
+                  scheme: HTTP
+                  path: /healthz
+                  port: 7061
               env:
               - { name: "PEER_OPERATOR_NAME",                 value: "{{ ansible_operator_meta.name }}" }
               - { name: "PEER_OPERATOR_ORG",                  value: "{{ organization }}" }

@@ -2,3 +2,7 @@
   fail:
     msg: "organization must be provided in the request"
   when: organization == None or (organization|trim) == ''
+
+- name: Setup project root path
+  set_fact:
+    ROOTDIR: "{{ lookup('env','HOME') }}"
