@@ -18,11 +18,11 @@
     status:
       download: "{{ DOWNLOAD_MSG | default('') }}"
       upload: "{{ UPLOADLOAD_MSG | default('') }}"
+      result: "{{ RESULT_MSG }}"
     conditions:
       - type: Running
         status: "{{ OK | ternary(True, False) }}"
         reason: "{{ OK | ternary('Successful', 'Failed') }}"
-        message: "{{ RESULT_MSG }}"
         lastTransitionTime: "{{ lookup('pipe', 'date --rfc-3339 seconds') }}"
 
 - name: End the whole process if the msg is not Succeeded

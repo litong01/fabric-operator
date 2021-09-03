@@ -1,7 +1,7 @@
 ---
 # Test channel creation
-- name: Create the operator.fabric.hyperledger.org/v1alpha1.Agent
-  k8s:
+- name: Channel Create
+  community.kubernetes.k8s:
     state: present
     namespace: '{{ namespace }}'
     definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
@@ -15,45 +15,18 @@
     cr_file: 'operator_v1alpha1_agent_channelcreate.yaml'
   register: cmdresult
 
-- name: Check the resource
+- name: Check the channel create
   assert:
     that:
     - cmdresult.failed == False
     - cmdresult.changed == True
     - cmdresult.method == 'create'
-    - cmdresult.result.status.conditions[0].ansibleResult.failures == 0
     fail_msg: Fabric Agent channel create failed
     success_msg: Fabric  Agent channel create succeeded
 
-# Test channel query
-- name: Create the operator.fabric.hyperledger.org/v1alpha1.Agent
-  k8s:
-    state: present
-    namespace: '{{ namespace }}'
-    definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
-    wait: yes
-    wait_timeout: 300
-    wait_condition:
-      type: Running
-      reason: Successful
-      status: "True"
-  vars:
-    cr_file: 'operator_v1alpha1_agent_channelquery.yaml'
-  register: cmdresult
-
-- name: Check the resource
-  assert:
-    that:
-    - cmdresult.failed == False
-    - cmdresult.changed == True
-    - cmdresult.method == 'patch'
-    - cmdresult.result.status.conditions[0].ansibleResult.failures == 0
-    fail_msg: Fabric Agent channel query failed
-    success_msg: Fabric  Agent channel query succeeded
-
 # Test channel join
-- name: Create the operator.fabric.hyperledger.org/v1alpha1.Agent
-  k8s:
+- name: Channel Join
+  community.kubernetes.k8s:
     state: present
     namespace: '{{ namespace }}'
     definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
@@ -67,24 +40,22 @@
     cr_file: 'operator_v1alpha1_agent_channeljoin.yaml'
   register: cmdresult
 
-- name: Check the resource
+- name: Check channel join
   assert:
     that:
     - cmdresult.failed == False
     - cmdresult.changed == True
     - cmdresult.method == 'patch'
-    - cmdresult.result.status.conditions[0].ansibleResult.failures == 0
     fail_msg: Fabric Agent channel join failed
     success_msg: Fabric  Agent channel join succeeded
 
-# Get channel configuration using channel query
-- name: Create the operator.fabric.hyperledger.org/v1alpha1.Agent
-  k8s:
+# Test channel query
+- name: Channel Query
+  community.kubernetes.k8s:
     state: present
     namespace: '{{ namespace }}'
     definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
     wait: yes
-    wait_sleep: 150
     wait_timeout: 300
     wait_condition:
       type: Running
@@ -94,20 +65,102 @@
     cr_file: 'operator_v1alpha1_agent_channelquery.yaml'
   register: cmdresult
 
-- name: Check the resource
+- name: Check channel query
   assert:
     that:
     - cmdresult.failed == False
     - cmdresult.changed == True
     - cmdresult.method == 'patch'
-    - cmdresult.result.status.conditions[0].ansibleResult.failures == 0
     - cmdresult.result.status.download != ''
     fail_msg: Fabric Agent channel query failed
     success_msg: Fabric  Agent channel query succeeded
 
-- name: Get the current channel configuration json file
-  command: "{{ cmdresult.result.status.download }} currentcfg.json"
+# Change channel configuration change based on the previous query results
+- name: Get pod name
+  set_fact:
+    pieces: "{{ cmdresult.result.status.download.split(':')[0].split(' ') }}"
+
+- name: Make a change to the configuration file
+  community.kubernetes.k8s_exec:
+    pod: "{{ pieces[6] }}"
+    container: "{{ pieces[5] }}"
+    namespace: "{{ pieces[3] }}"
+    command: >-
+      /usr/bin/sed -i 's/"max_message_count": 10/"max_message_count": 20/g' /opt/ansible/agent/upload/mychannel_config.json
+
+# Test channel change
+- name: Execute channel change
+  community.kubernetes.k8s:
+    state: present
+    namespace: '{{ namespace }}'
+    definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      reason: Successful
+      status: "True"
+  vars:
+    cr_file: 'operator_v1alpha1_agent_channelchange.yaml'
   register: cmdresult
 
-- debug:
-    var: cmdresult
+- name: Check channel change
+  assert:
+    that:
+    - cmdresult.failed == False
+    - cmdresult.changed == True
+    - cmdresult.method == 'patch'
+    - cmdresult.result.status.download != ''
+    fail_msg: Fabric Agent channel change failed
+    success_msg: Fabric Agent channel change succeeded
+
+# Test channel signoff
+- name: Execute channel signoff
+  community.kubernetes.k8s:
+    state: present
+    namespace: '{{ namespace }}'
+    definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      reason: Successful
+      status: "True"
+  vars:
+    cr_file: 'operator_v1alpha1_agent_channelsignoff.yaml'
+  register: cmdresult
+
+- name: Check channel signoff
+  assert:
+    that:
+    - cmdresult.failed == False
+    - cmdresult.changed == True
+    - cmdresult.method == 'patch'
+    - cmdresult.result.status.download != ''
+    fail_msg: Fabric Agent channel signoff failed
+    success_msg: Fabric Agent channel signoff succeeded
+
+# Test channel update
+- name: Execute channel update
+  community.kubernetes.k8s:
+    state: present
+    namespace: '{{ namespace }}'
+    definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      reason: Successful
+      status: "True"
+  vars:
+    cr_file: 'operator_v1alpha1_agent_channelupdate.yaml'
+  register: cmdresult
+
+- name: Check channel update
+  assert:
+    that:
+    - cmdresult.failed == False
+    - cmdresult.changed == True
+    - cmdresult.method == 'patch'
+    fail_msg: Fabric Agent channel update failed
+    success_msg: Fabric Agent channel update succeeded

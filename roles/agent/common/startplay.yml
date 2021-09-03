@@ -10,9 +10,10 @@
     status:
       download: ""
       upload: ""
+      result: ""
     conditions:
       - type: Running
-        status: "Running"
+        status: "True"
         reason: "Running"
         message: "Agent is starting"
         lastTransitionTime: "{{ lookup('pipe', 'date --rfc-3339 seconds') }}"

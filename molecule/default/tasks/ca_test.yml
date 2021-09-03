@@ -24,7 +24,7 @@
     - cmdresult.result.status.operations != ''
     - cmdresult.result.status.endpoint != ''
     fail_msg: Fabric CA node creation failed
-    success_msg: Fabric CA node was creation succeeded
+    success_msg: Fabric CA node creation succeeded
 
 - name: Access the operation endpoint
   get_url:
