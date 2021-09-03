@@ -18,6 +18,22 @@
       vars:
         state: present
 
+    - import_tasks: tasks/nodecert_test.yml
+      vars:
+        state: present
+
     - import_tasks: tasks/ca_test.yml
+      vars:
+        state: present
+
+    - import_tasks: tasks/orderer_test.yml
+      vars:
+        state: present
+
+    - import_tasks: tasks/peer_test.yml
+      vars:
+        state: present
+
+    - import_tasks: tasks/agent_test.yml
       vars:
         state: present

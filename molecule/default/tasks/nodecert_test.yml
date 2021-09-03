@@ -12,8 +12,14 @@
       status: "True"
   vars:
     cr_file: 'operator_v1alpha1_nodecert.yaml'
+  register: cmdresult
 
-- name: Add assertions here
+- name: Check the resource
   assert:
-    that: false
-    fail_msg: FIXME Add real assertions for your operator
+    that:
+    - cmdresult.failed == False
+    - cmdresult.changed == True
+    - cmdresult.method == 'create'
+    - cmdresult.result.status.conditions[0].ansibleResult.failures == 0
+    fail_msg: Fabric Node cert creation failed
+    success_msg: Fabric Node cert creation succeeded

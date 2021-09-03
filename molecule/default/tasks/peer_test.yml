@@ -12,8 +12,29 @@
       status: "True"
   vars:
     cr_file: 'operator_v1alpha1_peer.yaml'
+  register: cmdresult
 
-- name: Add assertions here
+- name: Check the resource
   assert:
-    that: false
-    fail_msg: FIXME Add real assertions for your operator
+    that:
+    - cmdresult.failed == False
+    - cmdresult.changed == True
+    - cmdresult.method == 'create'
+    - cmdresult.result.status.conditions[0].ansibleResult.failures == 0
+    - cmdresult.result.status.operations != ''
+    - cmdresult.result.status.endpoint != ''
+    fail_msg: Fabric Peer node creation failed
+    success_msg: Fabric Peer node creation succeeded
+
+- name: Access the operation endpoint
+  get_url:
+    url: "{{ cmdresult.result.status.operations }}/healthz"
+    dest: /tmp/notimportant
+  register: cmdresult
+
+- name: Check the response
+  assert:
+    that:
+    - cmdresult.status_code == 200
+    fail_msg: Fabric Peer node healthz check failed
+    success_msg: Fabric Peer node healthz check succeeded
