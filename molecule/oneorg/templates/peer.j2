@@ -1,0 +1,11 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Peer
+metadata:
+  name: "{{ fabricnode.prefix }}-{{ nodeindex }}"
+spec:
+  # Add fields here
+  organization: "{{ orgname }}"
+  nodeCert:
+  release: 2.3.2
+  storage: 1Gi
+  logLevel: DEBUG

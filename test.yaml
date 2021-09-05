@@ -7,24 +7,10 @@
     set_fact:
       downloadurl: "kubectl cp -n osdk-test -c manager osdk-controller-manager-64fb694b5b-qglqj:/opt/ansible/agent/download/mychannel_config.json"
 
-  - name: Parse
-    set_fact:
-      pieces: "{{ downloadurl.split(':')[0].split(' ') }}"
+  - set_fact:
+      nodecertname: >-
+        {{ ( (node_cert is not defined) or (node_cert == None) or ((node_cert|trim) == '') ) 
+          | ternary('The default value', node_cert) }}
 
   - debug:
-      var: pieces
-
-  - name: Test file
-    community.kubernetes.k8s_exec:
-      namespace: "{{ pieces[3] }}"
-      pod: "{{ pieces[6] }}"
-      container: manager
-      command: "ls -la"
-
-  - name: Make a change to the configuration file
-    community.kubernetes.k8s_exec:
-      namespace: "{{ pieces[3] }}"
-      pod: "{{ pieces[6] }}"
-      container: manager 
-      command: >-
-        /usr/bin/sed -i 's/"max_message_count": 10/"max_message_count": 20/g' /opt/ansible/agent/upload/mychannel_config.json
+      var: nodecertname

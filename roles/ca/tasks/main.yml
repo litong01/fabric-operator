@@ -12,7 +12,6 @@
 - name: Setup canonical name and node cert name for the node
   set_fact:
     cnodename: "{{ nodename | replace('.', '-') | lower }}"
-    nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
 
 - name: Retrieve the CA node cert secret
   community.kubernetes.k8s_info:

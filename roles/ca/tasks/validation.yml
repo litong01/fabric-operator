@@ -6,3 +6,10 @@
 - name: Setup project root path
   set_fact:
     ROOTDIR: "{{ lookup('env','HOME') }}"
+
+- name: Setup  nodecert name
+  set_fact:
+    nodecertname: >-
+      {{ ( (node_cert is not defined) or (node_cert == None) or ((node_cert|trim) == '') ) 
+           | ternary(ansible_operator_meta.name, node_cert) }}
+

@@ -13,7 +13,6 @@
 - name: setup canonical name and node cert name for the node
   set_fact:
     cnodename: "{{ nodename | replace('.', '-') | lower }}"
-    nodecertname: "{{ ((node_cert == None or (node_cert|trim) == '')) | ternary(ansible_operator_meta.name, node_cert) }}"
 
 - name: Setup node cert secret name
   set_fact:

@@ -6,4 +6,8 @@
 - name: Set mspid
   set_fact:
     mspid: "{{ organization|replace('.', '-') }}"
+    nodecertname: >-
+      {{ ( (node_cert is not defined) or (node_cert == None) or ((node_cert|trim) == '') ) 
+           | ternary(ansible_operator_meta.name, node_cert) }}
     ROOTDIR: "{{ lookup('env','HOME') }}"
+

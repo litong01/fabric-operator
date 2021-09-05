@@ -1,0 +1,28 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Check if the network configuration file exists
+    stat:
+      path: '{{ playbook_dir }}/.env.yml'
+    register: configfile
+
+  - name: Verify configuration
+    assert:
+      that:
+      - configfile.stat.exists == True
+      fail_msg: .env.yml file does not exist
+      success_msg: .env.yml file exists
+
+  - name: Load the configuration file
+    when: configfile.stat.exists
+    include_vars:
+      file: "{{ configfile.stat.path }}"
+
+  - include_tasks: ../basesystem/tasks/orgs.yml
+    vars:
+      state: present
