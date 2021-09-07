@@ -10,7 +10,7 @@
     community.kubernetes.k8s:
       api_version: v1
       kind: Namespace
-      name: '{{ testnamespace }}'
+      name: '{{ namespace }}'
       kubeconfig: '{{ kubeconfig }}'
 
   - name: Check if the network configuration file exists
@@ -95,15 +95,26 @@
       tp_file: 'agent_channelchange.j2'
     register: cmdresult
 
+  - name: Query the agent
+    community.kubernetes.k8s_info:
+      kind: Agent
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ agentname }}'
+      namespace: '{{ namespace }}'
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        status: "True"
+        reason: Successful
+    register: cmdresult
+
   - name: Check channel change
     assert:
       that:
-      - cmdresult.failed == False
-      - cmdresult.changed == True
-      - cmdresult.method == 'patch'
-      - cmdresult.result.status.download != ''
-      fail_msg: Fabric Agent channel signoff failed
-      success_msg: Fabric Agent channel signoff succeeded
+      - cmdresult.resources[0].status.download != ''
+      fail_msg: Fabric Agent channel change failed
+      success_msg: Fabric Agent channel change succeeded
 
   # Test channel signoff
   - name: Execute channel signoff

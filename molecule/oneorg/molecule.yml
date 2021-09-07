@@ -21,7 +21,7 @@ provisioner:
   inventory:
     group_vars:
       all:
-        namespace: ${TEST_OPERATOR_NAMESPACE:-fabric-operator-system}
+        namespace: ${TEST_OPERATOR_NAMESPACE:-test}
     host_vars:
       localhost:
         ansible_python_interpreter: '{{ ansible_playbook_python }}'
@@ -33,7 +33,6 @@ provisioner:
         kubeconfig: "{{ lookup('env', 'KUBECONFIG') }}"
         kustomize: ${KUSTOMIZE_PATH:-kustomize}
         fabric_config: ${MOLECULE_PROJECT_DIRECTORY}/molecule/oneorg/.env.yml
-        testnamespace: test
   env:
     K8S_AUTH_KUBECONFIG: ~/.kube/config
     KUBECONFIG: ~/.kube/config

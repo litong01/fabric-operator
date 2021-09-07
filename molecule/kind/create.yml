@@ -4,7 +4,5 @@
   connection: local
   gather_facts: false
   tasks:
-    # - name: Create test kind cluster
-    #   command: kind create cluster --name osdk-test --kubeconfig {{ kubeconfig }}
     - name: Use the tools script to setup k8s
       command: "{{ project_dir }}/tools/nginxk8s.sh --name kind --kubeconfig {{ kubeconfig }}"
