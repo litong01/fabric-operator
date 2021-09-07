@@ -13,6 +13,8 @@ must be installed:
 
 # Run the molecule test
 
+# Run the molecule test
+
 ```
 export MOLECULE_PROJECT_DIRECTORY=$(pwd)
 export KUSTOMIZE_PATH=${MOLECULE_PROJECT_DIRECTORY}/bin/kustomize

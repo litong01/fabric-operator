@@ -1,5 +1,5 @@
 # Adds namespace to all resources.
-namespace: osdk-test
+namespace: fabric-operator-system
 
 namePrefix: osdk-
 
@@ -11,7 +11,7 @@ patchesStrategicMerge:
 - manager_image.yaml
 - debug_logs_patch.yaml
 - ../default/manager_auth_proxy_patch.yaml
-- pull_policy/Never.yaml
+- pull_policy/Always.yaml
 
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization

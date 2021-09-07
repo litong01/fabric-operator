@@ -1,0 +1,24 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Switch to fabric-operator-system namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - name: Remove the operator
+    import_tasks: ../default/kustomize.yml
+    vars:
+      state: absent
+
+  - name: Remove nginx ingress controller
+    command: >-
+      kubectl --kubeconfig {{ kubeconfig }} delete
+      -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/aws/deploy.yaml

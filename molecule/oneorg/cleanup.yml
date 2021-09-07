@@ -26,3 +26,11 @@
   - include_tasks: ../basesystem/tasks/orgs.yml
     vars:
       state: absent
+
+  - name: Delete test namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ testnamespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+      state: absent

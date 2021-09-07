@@ -21,14 +21,15 @@
       agentname: "org1agent"
       namespace: "org1space"
 
-  - name: Create Namespace
+  - name: Switch to the test namespace
     community.kubernetes.k8s:
       api_version: v1
       kind: Namespace
       name: '{{ namespace }}'
       kubeconfig: '{{ kubeconfig }}'
 
-  - include_tasks: ../basesystem/tasks/orgs.yml
+  - name: Delete the nodes
+    include_tasks: ../basesystem/tasks/orgs.yml
     vars:
       state: absent
 
@@ -55,14 +56,15 @@
       agentname: "org2agent"
       namespace: "org2space"
 
-  - name: Create Namespace
+  - name: Switch to the test namespace
     community.kubernetes.k8s:
       api_version: v1
       kind: Namespace
       name: '{{ namespace }}'
       kubeconfig: '{{ kubeconfig }}'
 
-  - include_tasks: ../basesystem/tasks/orgs.yml
+  - name: Delete nodes
+    include_tasks: ../basesystem/tasks/orgs.yml
     vars:
       state: absent
 

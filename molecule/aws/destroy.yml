@@ -1,0 +1,8 @@
+---
+- name: Destroy
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  collections:
+    - community.kubernetes
+  tasks: []

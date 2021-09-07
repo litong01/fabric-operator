@@ -6,6 +6,13 @@
   connection: local
   gather_facts: false
   tasks:
+  - name: Create test namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ testnamespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
   - name: Check if the network configuration file exists
     stat:
       path: '{{ playbook_dir }}/.env.yml'

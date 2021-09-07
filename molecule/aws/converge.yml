@@ -1,0 +1,38 @@
+---
+- name: Converge
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: Deploy nginx ingress controller
+    command: >-
+      kubectl --kubeconfig {{ kubeconfig }} apply
+      -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.0.0/deploy/static/provider/aws/deploy.yaml
+
+  - name: Query ingress controller service
+    community.kubernetes.k8s_info:
+      kind: Deployment
+      api_version: apps/v1
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Available
+        status: "True"
+
+  - name: Create fabric-operator-system namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: 'fabric-operator-system'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - name: Build operator image
+    command: make docker-build -IMG={{ operator_image }}
+    args:
+      chdir: '{{ project_dir }}'
+
+  - import_tasks: ../default/kustomize.yml
+    vars:
+      state: present
