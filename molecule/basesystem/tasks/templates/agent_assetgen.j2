@@ -1,0 +1,13 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: {{ agentname }}
+spec:
+  organization: {{ orgname }}
+  cleanup: true
+  actions:
+  - name: assetgen
+    description: Generate asset file
+    parameters:
+      assettypes: ['ca', 'orderer', 'peer']
+      includewallets: no

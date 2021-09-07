@@ -1,0 +1,9 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks: []
+

@@ -13,7 +13,7 @@
       result: ""
     conditions:
       - type: Running
-        status: "True"
+        status: "False"
         reason: "Running"
         message: "Agent is starting"
         lastTransitionTime: "{{ lookup('pipe', 'date --rfc-3339 seconds') }}"

@@ -1,0 +1,357 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Converge
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+# Setup the first organization
+  - name: Set up first organization
+    set_fact:
+      orgname: "org1.example.com"
+      ca_prefix: "org1ca"
+      number_of_ca: 1
+      orderer_prefix: "org1orderer"
+      number_of_orderer: 1
+      peer_prefix: "org1peer"
+      number_of_peer: 1
+      orderernode: "org1orderer-0-org1-example-com"
+      peernode: "org1peer-0-org1-example-com"
+      agentname: "org1agent"
+      namespace: "org1space"
+
+  - name: Create Namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - include_tasks: ../basesystem/tasks/orgs.yml
+    vars:
+      state: present
+
+# Create a channel and join the peer, then do a query
+  - name: Create, join and query the channel
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop:
+    - 'agent_channelcreate.j2'
+    - 'agent_channeljoin.j2'
+    - 'agent_channelquery.j2'
+    loop_control:
+      loop_var: action
+
+# Set up the second organization
+  - name: Set up the second organization
+    set_fact:
+      orgname: "org2.example.com"
+      ca_prefix: "org2ca"
+      number_of_ca: 1
+      orderer_prefix: "org1orderer"
+      number_of_orderer: 0
+      peer_prefix: "org2peer"
+      number_of_peer: 1
+      orderernode: "org1orderer-0-org1-example-com"
+      peernode: "org2peer-0-org1-example-com"
+      agentname: "org2agent"
+      namespace: "org2space"
+
+  - name: Create Namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - include_tasks: ../basesystem/tasks/orgs.yml
+    vars:
+      state: present
+
+# Do asset gen
+  - name: Generate the asset for the organization
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop:
+    - 'agent_assetgen.j2'
+    loop_control:
+      loop_var: action
+
+  - name: Query the agent
+    community.kubernetes.k8s_info:
+      kind: Agent
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ agentname }}'
+      namespace: '{{ namespace }}'
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        status: "True"
+        reason: Successful
+    register: cmdresult
+
+  - name: Parse the download url from above command result
+    set_fact:
+      pieces: "{{ cmdresult.resources[0].status.download.split(':')[0].split(' ') }}"
+
+  - name: Unzip the asset file
+    community.kubernetes.k8s_exec:
+      pod: "{{ pieces[6] }}"
+      container: "{{ pieces[5] }}"
+      namespace: "{{ pieces[3] }}"
+      command: >-
+        unzip -o /opt/ansible/agent/download/org2-example-com-assets.zip -d /opt/ansible/agent/download
+
+  - name: Copy the org2 file to the upload directory
+    community.kubernetes.k8s_exec:
+      pod: "{{ pieces[6] }}"
+      container: "{{ pieces[5] }}"
+      namespace: "{{ pieces[3] }}"
+      command: >-
+        cp /opt/ansible/agent/download/assets/Organizations/org2.example.com.json
+        /opt/ansible/agent/upload/neworg.json
+
+# Switch back to the first organization and its namespace
+  - name: Set up variables for the first organization
+    set_fact:
+      orgname: "org1.example.com"
+      ca_prefix: "org1ca"
+      number_of_ca: 1
+      orderer_prefix: "org1orderer"
+      number_of_orderer: 1
+      peer_prefix: "org1peer"
+      number_of_peer: 1
+      orderernode: "org1orderer-0-org1-example-com"
+      peernode: "org1peer-0-org1-example-com"
+      agentname: "org1agent"
+      namespace: "org1space"
+
+  - name: Switch the namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - name: Execute node import
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_nodeimport.j2'
+      assetname: 'org2-example-com-assets.zip'
+    register: cmdresult
+
+  - name: Check node import
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      fail_msg: Fabric Agent node import failed
+      success_msg: Fabric Agent node import succeeded
+
+  - name: Execute org join
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_orgjoin.j2'
+    register: cmdresult
+
+  - name: Check org join
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      - cmdresult.result.status.download != ''
+      fail_msg: Fabric Agent org join failed
+      success_msg: Fabric Agent org join succeeded
+
+  # Test channel signoff
+  - name: Execute channel signoff
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelsignoff.j2'
+    register: cmdresult
+  
+  - name: Check channel signoff
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      - cmdresult.result.status.download != ''
+      fail_msg: Fabric Agent channel signoff failed
+      success_msg: Fabric Agent channel signoff succeeded
+  
+  # Test channel update
+  - name: Execute channel update
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelupdate.j2'
+    register: cmdresult
+  
+  - name: Check channel update
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      fail_msg: Fabric Agent channel update failed
+      success_msg: Fabric Agent channel update succeeded
+
+  - name: Generate the asset for the organization
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop:
+    - 'agent_assetgen.j2'
+    loop_control:
+      loop_var: action
+
+  - name: Query the agent
+    community.kubernetes.k8s_info:
+      kind: Agent
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ agentname }}'
+      namespace: '{{ namespace }}'
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        status: "True"
+        reason: Successful
+    register: cmdresult
+
+# Since the second org is now part of the channel
+# Join its peer to the channel
+  - name: Set up the second organization
+    set_fact:
+      orgname: "org2.example.com"
+      ca_prefix: "org2ca"
+      number_of_ca: 1
+      orderer_prefix: "org1orderer"
+      number_of_orderer: 0
+      peer_prefix: "org2peer"
+      number_of_peer: 1
+      orderernode: "org1orderer-0-org1-example-com"
+      peernode: "org2peer-0-org1-example-com"
+      agentname: "org2agent"
+      namespace: "org2space"
+
+  - name: Switch Namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+
+  - name: Import org1 to the org2 namespace
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_nodeimport.j2'
+      assetname: 'org1-example-com-assets.zip'
+    register: cmdresult
+
+  - name: Check node import
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      fail_msg: Fabric Agent node import failed
+      success_msg: Fabric Agent node import succeeded
+
+  - name: Join the peer to the channel
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop:
+    - 'agent_channeljoin.j2'
+    loop_control:
+      loop_var: action

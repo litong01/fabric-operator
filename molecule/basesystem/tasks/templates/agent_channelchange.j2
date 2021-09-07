@@ -1,0 +1,14 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: {{ agentname }}
+spec:
+  organization: {{ orgname }}
+  actions:
+  - name: channelchange
+    description: create channel change envelope for signing
+    parameters:
+      newconfig: mychannel_config.json
+      channelName: mychannel
+      ordererNode: {{ orderernode }}
+      peerNode: {{ peernode }}

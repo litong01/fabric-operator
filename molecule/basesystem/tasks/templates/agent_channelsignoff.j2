@@ -1,0 +1,14 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: {{ agentname }}
+spec:
+  organization: {{ orgname }}
+  actions:
+  - name: channelsignoff
+    description: sign off channel configuration changes
+    parameters:
+      envelopeFile: mychannel_update_envelope.pb
+      channelName: mychannel
+      ordererNode: {{ orderernode }}
+      peerNode: {{ peernode }}

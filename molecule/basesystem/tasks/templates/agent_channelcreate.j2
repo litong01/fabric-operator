@@ -1,0 +1,13 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: {{ agentname }}
+spec:
+  organization: {{ orgname }}
+  actions:
+  - name: channelcreate
+    description: Create new channel
+    parameters:
+      channelName: mychannel
+      ordererNode: {{ orderernode }}
+      additionalOrgs: []

@@ -1,0 +1,13 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: {{ agentname }}
+spec:
+  organization: {{ orgname }}
+  actions:
+  - name: channeljoin
+    description: join a peer to the channel
+    parameters:
+      channelName: mychannel
+      ordererNode: {{ orderernode }}
+      peerNode: {{ peernode }}

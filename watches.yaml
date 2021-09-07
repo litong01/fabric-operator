@@ -13,14 +13,14 @@
   role: orderer
   finalizer:
     name: operator.fabric.hyperledger.org/finalizer
-    playbook: playbooks/network/destroy-port.yml
+    playbook: playbooks/network/destroy-port-pvc.yml
 - version: v1alpha1
   group: operator.fabric.hyperledger.org
   kind: Peer
   role: peer
   finalizer:
     name: operator.fabric.hyperledger.org/finalizer
-    playbook: playbooks/network/destroy-port.yml
+    playbook: playbooks/network/destroy-port-pvc.yml
 - version: v1alpha1
   group: operator.fabric.hyperledger.org
   kind: Nodecert

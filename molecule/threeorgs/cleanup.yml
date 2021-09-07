@@ -1,0 +1,75 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+# Setup the first organization
+  - name: Set up first organization
+    set_fact:
+      orgname: "org1.example.com"
+      ca_prefix: "org1ca"
+      number_of_ca: 1
+      orderer_prefix: "org1orderer"
+      number_of_orderer: 1
+      peer_prefix: "org1peer"
+      number_of_peer: 1
+      orderernode: "org1orderer-0-org1-example-com"
+      peernode: "org1peer-0-org1-example-com"
+      agentname: "org1agent"
+      namespace: "org1space"
+
+  - name: Create Namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - include_tasks: ../basesystem/tasks/orgs.yml
+    vars:
+      state: absent
+
+  - name: Delete the namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+      state: absent
+
+# Set up the second organization
+  - name: Set up the second organization
+    set_fact:
+      orgname: "org2.example.com"
+      ca_prefix: "org2ca"
+      number_of_ca: 1
+      orderer_prefix: "org1orderer"
+      number_of_orderer: 0
+      peer_prefix: "org2peer"
+      number_of_peer: 1
+      orderernode: "org1orderer-0-org1-example-com"
+      peernode: "org2peer-0-org1-example-com"
+      agentname: "org2agent"
+      namespace: "org2space"
+
+  - name: Create Namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - include_tasks: ../basesystem/tasks/orgs.yml
+    vars:
+      state: absent
+
+  - name: Delete the namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+      state: absent

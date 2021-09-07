@@ -88,7 +88,7 @@
 
   - name: Check if the asset is a Org Request file or just an asset file
     set_fact:
-      isOrgRequest: "{{ (theasset.values is defined)|ternary(True, False) }}"
+      isOrgRequest: "{{ (theasset.mod_policy is defined)|ternary(True, False) }}"
       isAsset: "{{ (theasset.fabric_node_ous is defined)|ternary(True, False) }}"
 
   - name: Update the crd status to fail

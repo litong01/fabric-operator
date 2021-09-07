@@ -20,6 +20,15 @@
 - name: Execute the action
   include_tasks: '{{ role_path }}/ops/{{ action.name }}/apply.yml'
 
-- name: Post action
-  debug:
-    msg: 'Action {{ action.name }} is now finished'
+# Wait for the action to be completed regardles successful or not
+- name: Wait for the action to complete
+  community.kubernetes.k8s_info:
+    kind: Agent
+    api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+    name: '{{ ansible_operator_meta.name }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      status: "True"

@@ -20,7 +20,7 @@
       changed_when: '"not yet present" in result.stdout'
 
     - name: Create Namespace
-      k8s:
+      community.kubernetes.k8s:
         api_version: v1
         kind: Namespace
         name: '{{ namespace }}'

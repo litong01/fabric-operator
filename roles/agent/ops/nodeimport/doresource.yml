@@ -19,7 +19,7 @@
         namespace: '{{ ansible_operator_meta.namespace }}'
         labels:
           fabric-node-type: "{{ theasset.type | replace('fabric-', '') | title }}"
-          fabric-node-name: "{{ theasset.name }}"
+          fabric-node-name: "{{ theassetsname }}"
       type: Opaque
       data:
         asset: "{{ theasset | to_nice_json(indent=2) | b64encode }}"

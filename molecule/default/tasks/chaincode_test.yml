@@ -1,6 +1,6 @@
 ---
 - name: Create the operator.fabric.hyperledger.org/v1alpha1.Chaincode
-  k8s:
+  community.kubernetes.k8s:
     state: present
     namespace: '{{ namespace }}'
     definition: "{{ lookup('template', '/'.join([samples_dir, cr_file])) | from_yaml }}"

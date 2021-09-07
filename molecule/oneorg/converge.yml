@@ -1,7 +1,7 @@
 ---
 # This module basically setup various ca, orderer, peer nodes for
 # an organization.
-- name: Create
+- name: Converge
   hosts: localhost
   connection: local
   gather_facts: false
@@ -26,3 +26,127 @@
   - include_tasks: ../basesystem/tasks/orgs.yml
     vars:
       state: present
+
+  - name: Create, join and query the channel
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop:
+    - 'agent_channelcreate.j2'
+    - 'agent_channeljoin.j2'
+    - 'agent_channelquery.j2'
+    loop_control:
+      loop_var: action
+
+  - name: Query the agent
+    community.kubernetes.k8s_info:
+      kind: Agent
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ agentname }}'
+      namespace: '{{ namespace }}'
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        status: "True"
+        reason: Successful
+    register: cmdresult
+
+  - name: Parse the download url from above command result
+    set_fact:
+      pieces: "{{ cmdresult.resources[0].status.download.split(':')[0].split(' ') }}"
+  
+  - name: Make a change to the configuration file
+    community.kubernetes.k8s_exec:
+      pod: "{{ pieces[6] }}"
+      container: "{{ pieces[5] }}"
+      namespace: "{{ pieces[3] }}"
+      command: >-
+        /usr/bin/sed -i 's/"max_message_count": 10/"max_message_count": 20/g' /opt/ansible/agent/upload/mychannel_config.json
+
+  - name: Execute channel change
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelchange.j2'
+    register: cmdresult
+
+  - name: Check channel change
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      - cmdresult.result.status.download != ''
+      fail_msg: Fabric Agent channel signoff failed
+      success_msg: Fabric Agent channel signoff succeeded
+
+  # Test channel signoff
+  - name: Execute channel signoff
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelsignoff.j2'
+    register: cmdresult
+  
+  - name: Check channel signoff
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      - cmdresult.result.status.download != ''
+      fail_msg: Fabric Agent channel signoff failed
+      success_msg: Fabric Agent channel signoff succeeded
+  
+  # Test channel update
+  - name: Execute channel update
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelupdate.j2'
+    register: cmdresult
+  
+  - name: Check channel update
+    assert:
+      that:
+      - cmdresult.failed == False
+      - cmdresult.changed == True
+      - cmdresult.method == 'patch'
+      fail_msg: Fabric Agent channel update failed
+      success_msg: Fabric Agent channel update succeeded

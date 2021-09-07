@@ -44,6 +44,11 @@
     dest: "{{ downloaddir }}/{{ orgid }}-assets.zip"
     format: zip
 
+- name: Copy the asset file to the uplod directory for further process
+  copy:
+    src: "{{ downloaddir }}/{{ orgid }}-assets.zip"
+    dest: "{{ uploaddir }}/{{ orgid }}-assets.zip"
+
 - name: Update the crd status
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:

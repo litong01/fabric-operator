@@ -3,14 +3,52 @@
   gather_facts: no
   connection: local
   tasks:
-  - name: setup variable
+  - name: Load the file
     set_fact:
-      downloadurl: "kubectl cp -n osdk-test -c manager osdk-controller-manager-64fb694b5b-qglqj:/opt/ansible/agent/download/mychannel_config.json"
-
-  - set_fact:
-      nodecertname: >-
-        {{ ( (node_cert is not defined) or (node_cert == None) or ((node_cert|trim) == '') ) 
-          | ternary('The default value', node_cert) }}
+      theasset: "{{ lookup('file', 'bbb.json') | from_json }}"
+    register: cmdresult
+    ignore_errors: yes
+    no_log: True
 
   - debug:
-      var: nodecertname
+      var: theasset
+
+
+  - name: Check if the asset is a Org Request file or just an asset file
+    set_fact:
+      isOrgRequest: "{{ (theasset.mod_policy is defined)|ternary(True, False) }}"
+      isAsset: "{{ (theasset.fabric_node_ous is defined)|ternary(True, False) }}"
+      consoleasset: "{{ theasset }}"
+
+  - debug:
+      var: isOrgRequest
+
+  - debug:
+      var: isAsset
+
+
+  - name: Validate the following important fields in the passed in object
+    when: >-
+      (consoleasset.msp_id|default('')) == '' or
+      consoleasset.type != 'msp' or
+      (consoleasset.admins|default([])|length) == 0 or
+      (consoleasset.tls_root_certs|default([])|length) == 0 or
+      (consoleasset.root_certs|default([])|length) == 0
+    debug:
+      msg: 'Failed - asset file does not have necessary information'
+
+
+
+  - name: Validate the following important fields in the passed in object
+    when: >-
+      (consoleasset.msp_id|default('')) == '' or
+      consoleasset.type != 'msp' or
+      (consoleasset.admins|default([])|length) == 0 or
+      (consoleasset.tls_root_certs|default([])|length) == 0 or
+      (consoleasset.root_certs|default([])|length) == 0
+    include_tasks: 'roles/agent/common/endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - asset file does not have necessary information'
+
+
+
