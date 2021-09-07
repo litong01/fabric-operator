@@ -195,13 +195,24 @@
       tp_file: 'agent_orgjoin.j2'
     register: cmdresult
 
-  - name: Check org join
+  - name: Query the agent
+    community.kubernetes.k8s_info:
+      kind: Agent
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ agentname }}'
+      namespace: '{{ namespace }}'
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        status: "True"
+        reason: Successful
+    register: cmdresult
+
+  - name: Check org join operation
     assert:
       that:
-      - cmdresult.failed == False
-      - cmdresult.changed == True
-      - cmdresult.method == 'patch'
-      - cmdresult.result.status.download != ''
+      - cmdresult.resources[0].status.download != ''
       fail_msg: Fabric Agent org join failed
       success_msg: Fabric Agent org join succeeded
 
