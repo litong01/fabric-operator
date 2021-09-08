@@ -4,11 +4,12 @@ metadata:
   name: {{ agentname }}
 spec:
   organization: {{ orgname }}
+  cleanup: {{ cleanupflag | default(true) }}
   actions:
   - name: orgjoin
     description: produce channel update envelope for new org to join a channel
     parameters:
-      mspAsset: neworg.json
+      mspAsset: {{ orgasset | default('neworg.json') }}
       channelName: mychannel
       ordererNode: {{ orderernode }}
       peerNode: {{ peernode }}

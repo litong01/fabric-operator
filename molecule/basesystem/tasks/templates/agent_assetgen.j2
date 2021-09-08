@@ -4,7 +4,7 @@ metadata:
   name: {{ agentname }}
 spec:
   organization: {{ orgname }}
-  cleanup: true
+  cleanup: {{ cleanupflag | default(true) }}
   actions:
   - name: assetgen
     description: Generate asset file

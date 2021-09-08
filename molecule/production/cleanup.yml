@@ -1,0 +1,13 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+  - name: Cleanup 3 organizations
+    include_tasks: 'removenodes.yml'
+    loop: "{{ range(1, 4) | list}}"
+    loop_control:
+      loop_var: seq

@@ -4,6 +4,7 @@ metadata:
   name: {{ agentname }}
 spec:
   organization: {{ orgname }}
+  cleanup: {{ cleanupflag | default(true) }}
   actions:
   - name: channelchange
     description: create channel change envelope for signing

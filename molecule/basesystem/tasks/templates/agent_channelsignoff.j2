@@ -4,6 +4,7 @@ metadata:
   name: {{ agentname }}
 spec:
   organization: {{ orgname }}
+  cleanup: {{ cleanupflag | default(true) }}
   actions:
   - name: channelsignoff
     description: sign off channel configuration changes

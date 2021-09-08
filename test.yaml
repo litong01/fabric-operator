@@ -3,52 +3,15 @@
   gather_facts: no
   connection: local
   tasks:
-  - name: Load the file
+  - name: test
     set_fact:
-      theasset: "{{ lookup('file', 'bbb.json') | from_json }}"
-    register: cmdresult
-    ignore_errors: yes
-    no_log: True
+      myvar: "{{ range(0, 3) | list }}"
+
+  - name: Load the configuration file
+    include_vars:
+      file: "molecule/production/.org1.yml"
+
+
 
   - debug:
-      var: theasset
-
-
-  - name: Check if the asset is a Org Request file or just an asset file
-    set_fact:
-      isOrgRequest: "{{ (theasset.mod_policy is defined)|ternary(True, False) }}"
-      isAsset: "{{ (theasset.fabric_node_ous is defined)|ternary(True, False) }}"
-      consoleasset: "{{ theasset }}"
-
-  - debug:
-      var: isOrgRequest
-
-  - debug:
-      var: isAsset
-
-
-  - name: Validate the following important fields in the passed in object
-    when: >-
-      (consoleasset.msp_id|default('')) == '' or
-      consoleasset.type != 'msp' or
-      (consoleasset.admins|default([])|length) == 0 or
-      (consoleasset.tls_root_certs|default([])|length) == 0 or
-      (consoleasset.root_certs|default([])|length) == 0
-    debug:
-      msg: 'Failed - asset file does not have necessary information'
-
-
-
-  - name: Validate the following important fields in the passed in object
-    when: >-
-      (consoleasset.msp_id|default('')) == '' or
-      consoleasset.type != 'msp' or
-      (consoleasset.admins|default([])|length) == 0 or
-      (consoleasset.tls_root_certs|default([])|length) == 0 or
-      (consoleasset.root_certs|default([])|length) == 0
-    include_tasks: 'roles/agent/common/endplay.yml'
-    vars:
-      RESULT_MSG: 'Failed - asset file does not have necessary information'
-
-
-
+      msg: "{{ namespace }}"

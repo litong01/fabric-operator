@@ -1,0 +1,254 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Converge
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+# Setup the all three organizations and their nodes
+  - name: Create 3 organizations and setup nodes based on the env configuration files
+    include_tasks: 'setupnodes.yml'
+    loop: "{{ range(1, 4) | list}}"
+    loop_control:
+      loop_var: seq
+
+  - name: Load org1 configuration
+    include_vars:
+      file: ".org1.yml"
+
+  - name: Create, join and query the channel
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop:
+    - 'agent_channelcreate.j2'
+    - 'agent_channeljoin.j2'
+    - 'agent_channelquery.j2'
+    loop_control:
+      loop_var: action
+
+  - name: Query the agent
+    community.kubernetes.k8s_info:
+      kind: Agent
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ agentname }}'
+      namespace: '{{ namespace }}'
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        status: "True"
+        reason: Successful
+    register: cmdresult
+
+  - name: Check channel query
+    assert:
+      that:
+      - cmdresult.resources[0].status.download != ''
+      fail_msg: Fabric Agent channel query failed
+      success_msg: Fabric Agent channel query succeeded
+
+  - name: Import both org2 and org3 assets to org1 namespace
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/agent_nodeimport.j2') | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop: "{{ [ 'org2-example-com-assets.zip', 'org3-example-com-assets.zip'] }}"
+    loop_control:
+      loop_var: assetname
+
+  - name: Query the agent
+    community.kubernetes.k8s_info:
+      kind: Agent
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ agentname }}'
+      namespace: '{{ namespace }}'
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        status: "True"
+        reason: Successful
+    register: cmdresult
+
+  - name: Check channel 
+    assert:
+      that:
+      - cmdresult.resources[0].status.result == 'Succeeded - Assets have been imported'
+      fail_msg: Fabric Agent node import failed
+      success_msg: Fabric Agent node import succeeded
+
+  - name: Join org2 to the channel via org1
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      orgasset: 'org2-example-com-msp'
+      tp_file: 'agent_orgjoin.j2'
+    register: cmdresult
+
+  - name: Org join signoff
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelsignoff.j2'
+    register: cmdresult
+
+  - name: Org join channel commit
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelupdate.j2'
+    register: cmdresult
+
+# We should have both org1 and org2 in the channel now, add org3 to the channel
+  - name: Join org3 to the channel via org1
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      orgasset: 'org3-example-com-msp'
+      tp_file: 'agent_orgjoin.j2'
+    register: cmdresult
+
+  - name: Org1 signoff org3 join the channel
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelsignoff.j2'
+    register: cmdresult
+
+# now join a peer from org2 to also sign off the org3 join
+# since now the policy requires org2 also sign off
+  - name: Load org2 configuration
+    include_vars:
+      file: ".org2.yml"
+
+  - name: Import org1 assets to org2 namespace
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/agent_nodeimport.j2') | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop: "{{ [ 'org1-example-com-assets.zip' ] }}"
+    loop_control:
+      loop_var: assetname
+
+  - name: Join the first peer of org2 to the channel
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channeljoin.j2'
+      orderernode: 'org1orderer-0-org1-example-com'
+      peernode: 'org2peer-0-org2-example-com'
+
+  - name: Org2 signoff org3 join the channel
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelsignoff.j2'
+      orderernode: 'org1orderer-0-org1-example-com'
+      peernode: 'org2peer-0-org2-example-com'
+    register: cmdresult
+
+# now commit the org3 channel join
+  - name: Org3 join channel commit
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'agent_channelupdate.j2'
+      orderernode: 'org1orderer-0-org1-example-com'
+      peernode: 'org2peer-0-org2-example-com'
+    register: cmdresult

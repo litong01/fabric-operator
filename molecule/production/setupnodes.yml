@@ -1,0 +1,55 @@
+- name: Load the configuration file
+  include_vars:
+    file: ".org{{ seq }}.yml"
+
+- debug:
+    msg: "The namespace {{ namespace }}"
+
+- name: Create Namespace
+  community.kubernetes.k8s:
+    api_version: v1
+    kind: Namespace
+    name: '{{ namespace }}'
+    kubeconfig: '{{ kubeconfig }}'
+
+- include_tasks: ../basesystem/tasks/orgs.yml
+  vars:
+    state: present
+
+- name: Generate the asset for the organization
+  community.kubernetes.k8s:
+    state: "present"
+    namespace: '{{ namespace }}'
+    definition: >-
+      {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/agent_assetgen.j2') | from_yaml }}
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      reason: Successful
+      status: "True"
+
+- name: Query the agent
+  community.kubernetes.k8s_info:
+    kind: Agent
+    api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+    name: '{{ agentname }}'
+    namespace: '{{ namespace }}'
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      status: "True"
+      reason: Successful
+  register: cmdresult
+
+- name: Parse the download url from above command result
+  set_fact:
+    pieces: >-
+      {{ pieces|default({})|combine({'org'+(seq|string):
+        (cmdresult.resources[0].status.download.split(':')[0].split(' ') +
+         cmdresult.resources[0].status.download.split(':')[1].split(' ')) 
+      }) }}
+
+- debug:
+    var: pieces

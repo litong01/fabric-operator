@@ -1,0 +1,11 @@
+orgname: "org2.example.com"
+ca_prefix: "org2ca"
+number_of_ca: 1
+orderer_prefix: "org2orderer"
+number_of_orderer: 0
+peer_prefix: "org2peer"
+number_of_peer: 2
+orderernode: "org1orderer-0-org1-example-com"
+peernode: "org2peer-0-org2-example-com"
+agentname: "org2agent"
+namespace: "org2space"

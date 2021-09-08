@@ -4,6 +4,7 @@ metadata:
   name: {{ agentname }}
 spec:
   organization: {{ orgname }}
+  cleanup: {{ cleanupflag | default(true) }}
   actions:
   - name: channeljoin
     description: join a peer to the channel

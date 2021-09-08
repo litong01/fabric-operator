@@ -1,0 +1,9 @@
+---
+- name: Prepare
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+  - name: Show the play name
+    debug:
+      msg: "Play is Prepare"
