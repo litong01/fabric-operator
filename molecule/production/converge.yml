@@ -287,3 +287,31 @@
     vars:
       tp_file: 'console.j2'
       consolename: 'org2console'
+
+# do a channel query to see the current states
+  - name: Load org1 configuration
+    include_vars:
+      file: ".org1.yml"
+
+  - name: Query the channel
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    loop:
+    - 'agent_channelquery.j2'
+    loop_control:
+      loop_var: action
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: Fabric Agent channel query failed
+      successmsg: Fabric Agent channel query succeeded

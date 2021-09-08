@@ -9,3 +9,4 @@ orderernode: "org1orderer-0-org1-example-com"
 peernode: "org1peer-0-org1-example-com"
 agentname: "org1agent"
 namespace: "org1space"
+includewallets: true

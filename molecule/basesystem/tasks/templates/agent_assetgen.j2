@@ -10,4 +10,4 @@ spec:
     description: Generate asset file
     parameters:
       assettypes: ['ca', 'orderer', 'peer']
-      includewallets: no
+      includewallets: {{ includewallets|default('no') }}
