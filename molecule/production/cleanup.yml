@@ -11,3 +11,15 @@
     loop: "{{ range(1, 4) | list}}"
     loop_control:
       loop_var: seq
+
+  # Clean up the console created for org2
+  - name: Remove the console for org2
+    community.kubernetes.k8s:
+      state: absent
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+    vars:
+      tp_file: 'console.j2'
+      orgname: 'org2.example.com'
+      consolename: 'org2console'

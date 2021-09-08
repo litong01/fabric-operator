@@ -1,0 +1,28 @@
+# This module checks an agent status
+# it takes the following parameters
+#    1. agentname
+#    2. namespace
+#    3. failmsg
+#    4. successmg
+# it checks the result of the operation to see if it was
+# marked as Succeeded
+- name: Query the agent
+  community.kubernetes.k8s_info:
+    kind: Agent
+    api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+    name: '{{ agentname }}'
+    namespace: '{{ namespace }}'
+    wait: yes
+    wait_timeout: 300
+    wait_condition:
+      type: Running
+      status: "True"
+      reason: Successful
+  register: cmdresult
+
+- name: Verify the previous operation
+  assert:
+    that:
+    - cmdresult.resources[0].status.result is regex('^Succeeded*')
+    fail_msg: "{{ failmsg|default('Fabric Agent verification failed') }}"
+    success_msg: "{{ successmsg|default('Fabric Agent verification succeeded') }}"

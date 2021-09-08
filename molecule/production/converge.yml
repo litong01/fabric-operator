@@ -36,26 +36,11 @@
     loop_control:
       loop_var: action
 
-  - name: Query the agent
-    community.kubernetes.k8s_info:
-      kind: Agent
-      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
-      name: '{{ agentname }}'
-      namespace: '{{ namespace }}'
-      wait: yes
-      wait_timeout: 300
-      wait_condition:
-        type: Running
-        status: "True"
-        reason: Successful
-    register: cmdresult
-
-  - name: Check channel query
-    assert:
-      that:
-      - cmdresult.resources[0].status.download != ''
-      fail_msg: Fabric Agent channel query failed
-      success_msg: Fabric Agent channel query succeeded
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: Fabric Agent channel query failed
+      successmsg: Fabric Agent channel query succeeded
 
   - name: Import both org2 and org3 assets to org1 namespace
     community.kubernetes.k8s:
@@ -73,26 +58,11 @@
     loop_control:
       loop_var: assetname
 
-  - name: Query the agent
-    community.kubernetes.k8s_info:
-      kind: Agent
-      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
-      name: '{{ agentname }}'
-      namespace: '{{ namespace }}'
-      wait: yes
-      wait_timeout: 300
-      wait_condition:
-        type: Running
-        status: "True"
-        reason: Successful
-    register: cmdresult
-
-  - name: Check channel 
-    assert:
-      that:
-      - cmdresult.resources[0].status.result == 'Succeeded - Assets have been imported'
-      fail_msg: Fabric Agent node import failed
-      success_msg: Fabric Agent node import succeeded
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent node import failed'
+      successmsg: 'Fabric Agent node import succeeded'
 
   - name: Join org2 to the channel via org1
     community.kubernetes.k8s:
@@ -109,9 +79,14 @@
     vars:
       orgasset: 'org2-example-com-msp'
       tp_file: 'agent_orgjoin.j2'
-    register: cmdresult
 
-  - name: Org join signoff
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org2 join channel failed'
+      successmsg: 'Fabric Agent org2 join channel succeeded'
+
+  - name: Org2 join channel signoff by org1
     community.kubernetes.k8s:
       state: present
       namespace: '{{ namespace }}'
@@ -125,9 +100,14 @@
         status: "True"
     vars:
       tp_file: 'agent_channelsignoff.j2'
-    register: cmdresult
 
-  - name: Org join channel commit
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org2 join channel signoff by org1 failed'
+      successmsg: 'Fabric Agent org2 join channel signoff by org1 succeeded'
+
+  - name: Org2 join channel commit
     community.kubernetes.k8s:
       state: present
       namespace: '{{ namespace }}'
@@ -141,7 +121,12 @@
         status: "True"
     vars:
       tp_file: 'agent_channelupdate.j2'
-    register: cmdresult
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org2 join channel commit by org1 failed'
+      successmsg: 'Fabric Agent org2 join channel commit by org1 succeeded'
 
 # We should have both org1 and org2 in the channel now, add org3 to the channel
   - name: Join org3 to the channel via org1
@@ -159,7 +144,12 @@
     vars:
       orgasset: 'org3-example-com-msp'
       tp_file: 'agent_orgjoin.j2'
-    register: cmdresult
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org3 join channel by org1 failed'
+      successmsg: 'Fabric Agent org2 join channel by org1 succeeded'
 
   - name: Org1 signoff org3 join the channel
     community.kubernetes.k8s:
@@ -176,6 +166,12 @@
     vars:
       tp_file: 'agent_channelsignoff.j2'
     register: cmdresult
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org3 join channel signoff by org1 failed'
+      successmsg: 'Fabric Agent org2 join channel signoff by org1 succeeded'
 
 # now join a peer from org2 to also sign off the org3 join
 # since now the policy requires org2 also sign off
@@ -199,6 +195,12 @@
     loop_control:
       loop_var: assetname
 
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org2 import org1 asset failed'
+      successmsg: 'Fabric Agent org2 import org1 asset succeeded'
+
   - name: Join the first peer of org2 to the channel
     community.kubernetes.k8s:
       state: "present"
@@ -216,6 +218,12 @@
       orderernode: 'org1orderer-0-org1-example-com'
       peernode: 'org2peer-0-org2-example-com'
 
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent join org2 first peer to the channel by org2 failed'
+      successmsg: 'Fabric Agent join org2 first peer to the channel by org2 succeeded'
+
   - name: Org2 signoff org3 join the channel
     community.kubernetes.k8s:
       state: present
@@ -232,10 +240,15 @@
       tp_file: 'agent_channelsignoff.j2'
       orderernode: 'org1orderer-0-org1-example-com'
       peernode: 'org2peer-0-org2-example-com'
-    register: cmdresult
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org2 signoff org3 join channel failed'
+      successmsg: 'Fabric Agent org2 signoff org3 join channel succeeded'
 
 # now commit the org3 channel join
-  - name: Org3 join channel commit
+  - name: Org3 join channel commit by org2
     community.kubernetes.k8s:
       state: present
       namespace: '{{ namespace }}'
@@ -251,4 +264,26 @@
       tp_file: 'agent_channelupdate.j2'
       orderernode: 'org1orderer-0-org1-example-com'
       peernode: 'org2peer-0-org2-example-com'
-    register: cmdresult
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: 'Fabric Agent org2 submit org3 join channel failed'
+      successmsg: 'Fabric Agent org2 submit org3 join channel succeeded'
+
+# Now start up the console by org2
+  - name: Create a console for org2
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'console.j2'
+      consolename: 'org2console'
