@@ -105,7 +105,7 @@ Profiles:
     Application:
       <<: *ApplicationDefaults
       Organizations:
-      - *{{ mspid }}
+      - <<: *{{ mspid }}
       Capabilities:
         <<: *ApplicationCapabilities
 
@@ -115,8 +115,9 @@ Profiles:
       <<: *ChannelCapabilities
     Orderer:
       <<: *OrdererDefaults
+      OrdererType: etcdraft
       Organizations:
-      - *{{ mspid }}
+      - <<: *{{ mspid }}
       Capabilities:
         <<: *OrdererCapabilities
     Application:
@@ -126,5 +127,5 @@ Profiles:
     Consortiums:
       FabricConsortium:
         Organizations:
-        - *{{ mspid }}
+        - <<: *{{ mspid }}
 

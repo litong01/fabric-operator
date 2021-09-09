@@ -5,4 +5,4 @@
   gather_facts: false
   tasks:
     - name: Use the tools script to setup k8s
-      command: "{{ project_dir }}/tools/nginxk8s.sh --name kind --kubeconfig {{ kubeconfig }}"
+      command: "{{ project_dir }}/tools/nginxk8s.sh"
