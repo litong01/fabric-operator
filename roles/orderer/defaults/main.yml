@@ -27,13 +27,23 @@ organization:
 #   admin.crt:
 nodeCert:
 
-# ca node fabric release, the valid number must match available fabric ca
+# node fabric release, the valid number must match available fabric ca
 # releases which is available as tag on each hyperledger/fabric-ca.
 # These tags can be found by search docker hub.
 release: 2.4
 
-# ca node storage size, this has to be valid kubernetes storage size
+# node storage size, this has to be valid kubernetes storage size
 storage: 5Gi
 
-# ca node logging level.
+# node logging level.
 logLevel: ERROR
+
+# bootstrip file. This file should be the genesis file saved in
+# a secret of k8s. The value of this parameter should be the secret
+# name in the namespace this orderer node is in. If the value is
+# not empty, then it means that the orderer node will be using
+# legacy system channel genesis block to start up. If the secret does
+# not exist but the name is specified, then a block will be created
+# automatically and saved in the secret. If the value is empty, then
+# the orderer node is start with no system channel.
+genesisfile:

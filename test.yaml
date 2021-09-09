@@ -3,15 +3,17 @@
   gather_facts: no
   connection: local
   tasks:
+  - set_fact:
+      ab: 'aaa'
+
+  - debug:
+      var: ab
+
   - name: test
     set_fact:
       myvar: "{{ range(0, 3) | list }}"
-
-  - name: Load the configuration file
-    include_vars:
-      file: "molecule/production/.org1.yml"
-
+      legacy: "{{ ab is defined and ab != None and ab != '' }}"
 
 
   - debug:
-      msg: "{{ namespace }}"
+      var: legacy

@@ -1,0 +1,25 @@
+#!/bin/bash
+# we will exit whenever there is an error
+set -e
+
+#1. Create the new channel genesis block
+export FABRIC_CFG_PATH={{ agentworkdir }}/config
+
+{{ bindir }}/bin/configtxgen -profile ApplicationGenesis \
+    -outputCreateChannelTx {{ channelName }}.tx --channelID {{ channelName }}
+
+#2. Setup environment variables and get the current channel configuration
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+
+# 3. Create the channel
+{{ bindir }}/bin/peer channel create -c {{ channelName }} \
+    -f {{ channelName }}.tx -o {{ ordererid.endpoint }} \
+    --cafile {{ agentworkdir }}/{{ ordererNode}}/tls/ca.crt --tls
+
+# 4. Copy the signed envelope to the download and upload directory
+cp {{ channelName }}.tx {{ downloaddir }}
+cp {{ channelName }}.tx {{ uploaddir }}

@@ -1,0 +1,90 @@
+# To create a new channel, an action must look like this
+#
+# - name: channelcreate
+#   description: Create new channel
+#   actions:
+#   - name: channelcreate
+#     description: Create new channel
+#     parameters:
+#       channelName: mychannel
+#       ordererNode: orderer-sample
+#       additionalOrgs:
+#       - org0-example-com-msp-asset
+#       - org1-example-com-msp-asset
+#
+# The ordererNode node has to be running in the cluster, that means
+# the channel can only be created locally to the cluster, only the owning
+# organization of the orderer node can create the new channel.
+# Both parameters are required
+
+- name: Get variable with their names
+  set_fact:
+    channelName: "{{ action.parameters.channel_name }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+    peerNode: "{{ action.parameters.peer_node }}"
+    additionalOrgs: "{{ action.parameters.additional_orgs | default([]) }}"
+
+- name: End the process if either variable is empty
+  when: channelName == '' or ordererNode == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Both channel name and orderer node must be provided'
+
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
+- name: Get orderer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ ordererNode }}"
+
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
+
+- name: Copy original config to working directory
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}'
+
+# Getting additional orgs certs
+- name: Layout additional org certs
+  when: additionalOrgs|length > 0
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  loop: '{{ additionalOrgs }}'
+  loop_control: 
+    loop_var: thesecretname
+
+- name: Setup configtx file
+  template:
+    src: '{{ role_path }}/ops/{{ action.name }}/templates/configtx.j2'
+    dest: '{{ agentworkdir }}/config/configtx.yaml'
+
+- name: Generate the channel create script
+  template:
+    src: "{{ role_path }}/ops/legacychannelcreate/templates/process.j2"
+    dest: "{{ agentworkdir }}/process.sh"
+    mode: +x
+
+- name: Generate the channel
+  ansible.builtin.command: "{{ agentworkdir }}/process.sh"
+  args:
+    chdir: '{{ agentworkdir }}'
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Update the resource status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: >-
+      {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel '+channelName+' was created',
+         'Failed - Channel Create. '+cmdresult.stderr) }}

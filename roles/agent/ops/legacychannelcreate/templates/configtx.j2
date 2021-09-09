@@ -1,0 +1,104 @@
+Organizations:
+- &{{ orgid }}
+  Name: {{ orgid }}
+  ID: {{ orgid }}
+  MSPDir: {{ agentworkdir }}/{{ ordererNode }}/msp
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.orderer')"
+    Writers:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.orderer')"
+    Admins:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin')"
+    Endorsement:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.peer')"
+  OrdererEndpoints:
+  - {{ ordererid.endpoint }}
+
+{% for org in additionalOrgs %}
+{% set theattr = (lookup('file', agentworkdir+'/'+org+'/msp/id.json')|from_json)  %}
+- &{{ theattr.mspid }}
+  Name: {{ theattr.mspid }}
+  ID: {{ theattr.mspid }}
+  MSPDir: {{ agentworkdir }}/{{ org }}/msp
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.orderer')"
+    Writers:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin', '{{ orgid }}.peer', '{{ orgid }}.orderer')"
+    Admins:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.admin')"
+    Endorsement:
+      Type: Signature
+      Rule: "OR('{{ orgid }}.peer')"
+
+{% endfor %}
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  ApplicationGenesis:
+    Consortium: FabricConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+      - *{{ orgid }}
+{% for org in additionalOrgs %}
+{% set theattr = (lookup('file', agentworkdir+'/'+org+'/msp/id.json')|from_json) %}
+      - *{{ theattr.mspid }}
+{% endfor %}
+      Capabilities:
+        <<: *ApplicationCapabilities
+

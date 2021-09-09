@@ -1,7 +1,7 @@
 apiVersion: operator.fabric.hyperledger.org/v1alpha1
 kind: Orderer
 metadata:
-  name: orderer15-sample
+  name: orderer-sample
 spec:
   # Add fields here
   organization: example.com
@@ -9,4 +9,4 @@ spec:
   release: 2.3.2
   storage: 1Gi
   logLevel: DEBUG
-  genesisfile: ''
+  genesisfile: oldsystem

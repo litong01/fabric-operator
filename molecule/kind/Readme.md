@@ -21,6 +21,6 @@ export K8S_AUTH_KUBECONFIG=${HOME}/.kube/config
 export KUBECONFIG=${HOME}/.kube/config
 export OPERATOR_IMAGE=email4tong/fabricop:v1.0.0
 
-mol converge -s aws
+mol converge -s kind
 
 ```
