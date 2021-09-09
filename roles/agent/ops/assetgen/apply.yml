@@ -8,6 +8,7 @@
 #     parameters:
 #       assettypes: ['ca', 'orderer', 'peer']
 #       includewallets: no
+#       channelName: 'mychannel'
 #
 #  assettypes indicate what resource wanting to be included in the exported file
 #  includewallets indicates if the admin wallets should also be included
@@ -16,6 +17,7 @@
   set_fact:
     assettypes: "{{ action.parameters.assettypes }}"
     includewallets: "{{ action.parameters.includewallets }}"
+    channelName: "{{ action.parameters.channel_name | default('mychannel') }}"
 
 - name: Fail the process if asset types are not provided
   when: (assettypes | length) == 0
