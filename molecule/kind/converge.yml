@@ -15,6 +15,13 @@
       register: result
       changed_when: '"not yet present" in result.stdout'
 
+    - name: Create Namespace
+      community.kubernetes.k8s:
+        api_version: v1
+        kind: Namespace
+        name: '{{ namespace }}'
+        kubeconfig: '{{ kubeconfig }}'
+
     - import_tasks: ../default/kustomize.yml
       vars:
         state: present
