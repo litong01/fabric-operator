@@ -1,0 +1,21 @@
+- name: Install the chaincode
+  ansible.builtin.shell: |
+    set -e
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
+    export CORE_PEER_TLS_ENABLED=true
+    export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+    export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+    {{ bindir }}/bin/peer lifecycle chaincode install {{ packageName }}
+  args:
+    chdir: '{{ agentworkdir }}'
+    executable: /bin/bash
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Verify the chaincode install response
+  when: cmdresult.rc != 0
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Chaincode install failed with error {{ cmdresult.stderr }}'

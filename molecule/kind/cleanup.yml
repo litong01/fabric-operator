@@ -1,0 +1,18 @@
+---
+- name: Cleanup
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  tasks:
+    - import_tasks: ../default/kustomize.yml
+      vars:
+        state: absent
+
+    - name: Delete the namespace
+      community.kubernetes.k8s:
+        api_version: v1
+        kind: Namespace
+        name: '{{ namespace }}'
+        kubeconfig: '{{ kubeconfig }}'
+        state: absent

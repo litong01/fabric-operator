@@ -1,0 +1,12 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: agent-sample
+spec:
+  organization: example.com
+  actions:
+  - name: ccinstall
+    description: install chaincode onto a peer node
+    parameters:
+      packageName: simple.tgz
+      peerNode: peer-sample-example-com

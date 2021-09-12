@@ -1,51 +1,60 @@
 - name: Start fabric operations
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   connection: local
   tasks:
-    - name: Show the role
-      debug:
-        msg: 'Running RELEASE'
+  - name: Add logs
+    blockinfile:
+      path: /var/hyperledger/production/externalbuilder/logs
+      marker: "#{{ ansible_date_time.iso8601 }}"
+      block: |
+        In release.yml
+        {{ BUILD_OUTPUT_DIR }} 
+        {{ RELEASE_OUTPUT_DIR }}
 
-    - name: Load metadata.json
-      set_fact:
-        cmetadata: "{{ lookup('file', CHAINCODE_METADATA_DIR + '/metadata.json') | from_json }}"
-        peername: "{{ lookup('env', 'PEER_OPERATOR_NAME') }}"
-        peerorg: "{{ lookup('env', 'PEER_OPERATOR_ORG') }}"
-        peernamespace: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
+  - name: Load metadata.json
+    set_fact:
+      cmetadata: "{{ lookup('file', BUILD_OUTPUT_DIR + '/metadata.json') | from_json }}"
+      peername: "{{ lookup('env', 'PEER_OPERATOR_NAME') }}"
+      peerorg: "{{ lookup('env', 'PEER_OPERATOR_ORG') }}"
+      peernamespace: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') }}"
 
-    - name: Setup chaincode name
-      set_fact:
-        ccname: "{{ (cmetadata.label+'-'+peername+'-'+peerorg)|replace('.', '-') }}"
+  - name: Add logs
+    blockinfile:
+      path: /var/hyperledger/production/externalbuilder/logs
+      marker: "#{{ ansible_date_time.iso8601 }}"
+      block: |
+        {{ cmetadata | to_nice_json(indent=2) }}
+        {{ peername }} {{ peerorg }}
+        {{ peernamespace }}
+        {{ cmetadata.path }}/{{ cmetadata.label|replace('_', ':') }}
 
-    - name: Create chaincode
-      community.kubernetes.k8s:
-        definition:
-          kind: Chaincode
-          apiVersion: operator.fabric.hyperledger.org/v1alpha1
-          metadata:
-            name: '{{ ccname }}'
-            namespace: '{{ peernamespace }}'
-          spec:
-            organization: '{{ peerorg }}'
-            image: "{{ cmetadata.path }}/{{ cmetadata.label|replace('_', ':') }}"
-            ccid: "{{ cmetadata.label }}"
-            port: 7090
+  - name: Setup chaincode name
+    set_fact:
+      ccname: "{{ (cmetadata.label+'-'+peername+'-'+peerorg)|replace('.', '-')|replace('_','-') }}"
 
-    - name: Create the chaincode/server directory for connection.json
-      file:
-        path: '{{ RELEASE_OUTPUT_DIR }}/chaincode/server'
-        state: 'directory'
-        mode: 0775
+  - name: Create the chaincode/server directory for connection.json
+    file:
+      path: '{{ RELEASE_OUTPUT_DIR }}/chaincode/server'
+      state: 'directory'
+      mode: 0775
 
-    - name: Create the connection file
-      copy:
-        dest: "{{ RELEASE_OUTPUT_DIR }}/chaincode/server/connection.json"
-        content: >-
-          {{ {"address": ccname+"."+peernamespace+":7090",
-              "dial_timeout": "10s",
-              "tls_required": false,
-              "client_auth_required": false,
-              "client_key": "",
-              "client_cert": "",
-              "root_cert": ""} | to_nice_json(indent=2) }}
+  - name: Create the connection file
+    copy:
+      dest: "{{ RELEASE_OUTPUT_DIR }}/chaincode/server/connection.json"
+      content: >-
+        {{ {"address": ccname+"."+peernamespace+":7090",
+            "dial_timeout": "10s",
+            "tls_required": false,
+            "client_auth_required": false,
+            "client_key": "",
+            "client_cert": "",
+            "root_cert": ""} | to_nice_json(indent=2) }}
+
+  - name: Add logs
+    blockinfile:
+      path: /var/hyperledger/production/externalbuilder/logs
+      marker: "#{{ ansible_date_time.iso8601 }}"
+      block: |
+        In release.yml
+        After copy the connection.json file to the target directory

@@ -1,12 +1,19 @@
 - name: Start fabric operations
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   connection: local
   tasks:
-    - name: Show the role
-      debug:
-        msg: 'Running BUILD'
+  - name: Add logs
+    blockinfile:
+      path: /var/hyperledger/production/externalbuilder/logs
+      marker: "#{{ ansible_date_time.iso8601 }}"
+      block: |
+        in build.yml
+        {{ CHAINCODE_SOURCE_DIR }} 
+        {{ CHAINCODE_METADATA_DIR }}
+        {{ BUILD_OUTPUT_DIR }}
 
-    - name: Show the parameters
-      debug:
-        msg: '{{ CHAINCODE_SOURCE_DIR }}  {{ CHAINCODE_METADATA_DIR }}  {{ BUILD_OUTPUT_DIR }}'
+  - name: Place the metadata.json in the output directory
+    copy:
+      src: '{{ CHAINCODE_METADATA_DIR }}/metadata.json'
+      dest: '{{ BUILD_OUTPUT_DIR }}/metadata.json' 

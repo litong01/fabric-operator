@@ -1,0 +1,104 @@
+# To create a new channel, an action must look like this
+#
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: channeljoin
+#     description: join a peer to the channel
+#     parameters:
+#       packageName: mycc_1.0.0.tar.gz
+#       ordererNode: orderer-sample-example-com
+#       peerNode: peer-sample-example-com
+
+- name: Get variable with their names
+  set_fact:
+    packageName: "{{ action.parameters.package_name }}"
+    peerNode: "{{ action.parameters.peer_node }}"
+
+- name: End the process if either variable is empty
+  when: packageName == '' or peerNode == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Chaincode package name, peer node all must be provided'
+
+- name: Check if the chaincode package file exists
+  stat:
+    path: '{{ uploaddir }}/{{ packageName }}'
+  register: ccfile
+
+# Process the uploaded file
+- name: Process the uploaded file
+  when: not ccfile.stat.exists
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Chaincode package file {{ packageName }} must be placed in the upload directory'
+
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
+
+- name: Get core yaml files
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}' 
+
+- name: Place the cc file in the working directory
+  copy:
+    src: '{{ uploaddir }}/{{ packageName }}'
+    dest: '{{ agentworkdir }}/{{ packageName }}' 
+
+- name: Unpackage the chaincode to get the metadata json file
+  unarchive:
+    src: '{{ agentworkdir }}/{{ packageName }}'
+    dest: '{{ agentworkdir }}'
+
+- name: Load the metadata file
+  set_fact:
+    cmetadata: "{{ lookup('file', agentworkdir+'/metadata.json') | from_json }}"
+    ccid: ''
+
+# Check to see if the cc has been installed
+- name: Query the chain code
+  include_tasks: querycc.yml
+
+- name: 'Install chaincode {{ packageName }}'
+  when: ccid == ''
+  include_tasks: installcc.yml
+
+- name: Ready to launch the chaincode service
+  when: ccid != ''
+  block:
+  - name: Setup chaincode name
+    set_fact:
+      ccname: "{{ (cmetadata.label+'-'+peerNode)|replace('.', '-')|replace('_','-') }}"
+
+  - name: Launch chaincode service
+    community.kubernetes.k8s:
+      definition:
+        apiVersion: operator.fabric.hyperledger.org/v1alpha1
+        kind: Chaincode
+        metadata:
+          name: '{{ ccname }}'
+          namespace: '{{ ansible_operator_meta.namespace }}'
+        spec:
+          organization: '{{ organization }}'
+          image: "{{ cmetadata.path }}/{{ cmetadata.label|replace('_', ':') }}"
+          ccid: "{{ ccid }}"
+          port: 7090
+    register: cmdresult
+    ignore_errors: yes
+
+- name: Update the resource status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: >-
+      {{ (cmdresult.failed == False)|ternary('Succeeded - Chaincode install',
+         'Failed - Chaincode install') }}

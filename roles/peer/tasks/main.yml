@@ -172,7 +172,10 @@
             initContainers:
             - name: setup
               image: 'email4tong/fabricop:v1.0.0'
-              imagePullPolicy: Always
+              imagePullPolicy: IfNotPresent
+              env:
+              - { name: "PEER_OPERATOR_NAME",  value: "{{ ansible_operator_meta.name }}" }
+              - { name: "PEER_OPERATOR_ORG",   value: "{{ organization }}" }
               command:
               - sh
               - "-c"
@@ -207,7 +210,7 @@
               - { mountPath: "/certs/tls", name: "nodetlscert" }
             - name: fabric-peer
               image: 'email4tong/fabricop:v1.0.0'
-              imagePullPolicy: Always
+              imagePullPolicy: IfNotPresent
               livenessProbe:
                 httpGet:
                   path: /healthz

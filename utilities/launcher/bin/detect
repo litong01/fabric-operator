@@ -1,8 +1,9 @@
 #! /bin/bash
 
+SCRIPTPATH="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 CHAINCODE_SOURCE_DIR=$1
 CHAINCODE_METADATA_DIR=$2
 
 ansible-playbook -e "CHAINCODE_SOURCE_DIR=$CHAINCODE_SOURCE_DIR" \
   -e "CHAINCODE_METADATA_DIR=$CHAINCODE_METADATA_DIR" \
-  -e "ansible_python_interpreter=/usr/bin/python3.8" detect.yml
+  -e "ansible_python_interpreter=/usr/bin/python3.8" ${SCRIPTPATH}/detect.yml

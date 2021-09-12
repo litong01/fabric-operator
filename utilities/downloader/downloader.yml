@@ -23,7 +23,12 @@
       set_fact:
         coreyaml: "{{ lookup('file', '/var/hyperledger/production/config/core.yaml') | from_yaml }}"
         extbuilders: "{{ {'externalBuilders':[
-          {'name': 'k8schaincode', 'path': '/opt/ansible/launcher'}
+          {'name': 'k8schaincode', 'path': '/opt/ansible/launcher', 'propagateEnvironment': [
+            'KUBERNETES_SERVICE_HOST', 'KUBERNETES_SERVICE_PORT','PEER_OPERATOR_NAME',
+            'PEER_OPERATOR_ORG', 'CORE_PEER_MSPCONFIGPATH', 'CORE_PEER_LOCALMSPID',
+            'CORE_PEER_ID', 'FABRIC_CFG_PATH', 'HOME', 'CORE_PEER_TLS_ENABLED',
+            'CORE_PEER_TLS_CERT_FILE', 'CORE_PEER_TLS_KEY_FILE', 'CORE_PEER_TLS_ROOTCERT_FILE'
+          ]}
         ] } }}"
 
     - name: Get chaincode settings together

@@ -1,0 +1,28 @@
+- name: Get CCID
+  ansible.builtin.shell: |
+    set -e
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
+    export FABRIC_LOGGING_SPEC=ERROR
+    export CORE_PEER_TLS_ENABLED=true
+    export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+    export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+    {{ bindir }}/bin/peer lifecycle chaincode queryinstalled -O json | tee out.json
+  args:
+    chdir: '{{ agentworkdir }}'
+    executable: /bin/bash
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Load the json file
+  set_fact:
+    installed: "{{ lookup('file', agentworkdir+'/out.json') | from_json }}"
+
+- name: Find the target chaincode
+  set_fact:
+    thetarget: >
+      {{ installed.installed_chaincodes | default([]) | selectattr('label', 'equalto', cmetadata.label) | list }}
+
+- set_fact:
+    ccid: "{{ (thetarget|length == 0)|ternary('', thetarget[0].package_id) }}"

@@ -4,7 +4,12 @@
   connection: local
   gather_facts: false
   tasks: []
-    - name: Set pull policy
-      command: '{{ kustomize }} edit add patch pull_policy/{{ operator_pull_policy }}.yaml'
-      args:
-        chdir: '{{ config_dir }}/testing'
+  - name: Set pull policy
+    command: '{{ kustomize }} edit {{ item.action }} patch pull_policy/{{ item.policy }}.yaml'
+    args:
+      chdir: '{{ config_dir }}/testing'
+    with_items:
+    - { 'action': 'remove', 'policy': 'Never' }
+    - { 'action': 'remove', 'policy': 'IfNotPresent' }
+    - { 'action': 'remove', 'policy': 'Always' }
+    - { 'action': 'remove', 'policy': '{{ operator_pull_policy }}' }

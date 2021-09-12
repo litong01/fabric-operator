@@ -1,22 +1,32 @@
 - name: Start fabric operations
   hosts: localhost
-  gather_facts: no
+  gather_facts: yes
   connection: local
   tasks:
-    - name: Show the role
-      debug:
-        msg: 'Running DETECT'
+  - name: Creating an empty file
+    file:
+      path: /var/hyperledger/production/externalbuilder/logs
+      state: touch
 
-    - name: Load metadata.json
-      set_fact:
-        cmetadata: "{{ lookup('file', CHAINCODE_METADATA_DIR + '/metadata.json') | from_json }}"
+  - name: Add logs
+    blockinfile:
+      path: /var/hyperledger/production/externalbuilder/logs
+      marker: "#{{ ansible_date_time.iso8601 }}"
+      block: |
+        in detect.yml
+        {{ CHAINCODE_SOURCE_DIR }} 
+        {{ CHAINCODE_METADATA_DIR }}
 
-    - name: Verify the metadata label
-      fail:
-        msg: "The chaincode metadata label must be provided"
-      when: cmetadata.label == ''
+  - name: Load metadata.json
+    set_fact:
+      cmetadata: "{{ lookup('file', CHAINCODE_METADATA_DIR + '/metadata.json') | from_json }}"
 
-    - name: Verify the metadata path
-      fail:
-        msg: "The chaincode metadata path must be provided"
-      when: cmetadata.path == ''
+  - name: Verify the metadata label
+    fail:
+      msg: "The chaincode metadata label must be provided"
+    when: cmetadata.label == ''
+
+  - name: Verify the metadata path
+    fail:
+      msg: "The chaincode metadata path must be provided"
+    when: cmetadata.path == ''
