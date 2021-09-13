@@ -1,0 +1,78 @@
+# To create a new channel, an action must look like this
+#
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: ccapprove
+#     description: approve chaincode for a channel
+#     parameters:
+#       ccLabel: simple_v1.0.0
+#       init: yes
+#       policy:
+#       channelName: mychannel
+#       peerNode: peer-sample-example-com
+#       ordererNode: orderer-sample-example-com
+
+- name: Get variable with their names
+  set_fact:
+    ccLabel: "{{ action.parameters.cc_label }}"
+    init: >-
+      {{ (action.parameters.init is defined and action.parameters.init == True) | ternary(True, False) }}
+    policy: >-
+      {{ (action.parameters.policy is defined and action.parameters.policy != '') |
+        ternary(action.parameters.policy, '') }}
+    channelName: "{{ action.parameters.channel_name }}"
+    peerNode: "{{ action.parameters.peer_node }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+
+- name: End the process if either variable is empty
+  when: ccLabel == '' or peerNode == '' or channelName == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Chaincode label, peer node and channel name all must be provided'
+
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
+- name: Set cc name and version
+  set_fact:
+    ccName: "{{ ccLabel.split('_')[0] }}"
+    ccVersion: "{{ ccLabel.split('_')[1] }}"
+
+- name: Get orderer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ ordererNode }}"
+
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
+
+- name: Get core yaml files
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}' 
+
+# Check to see if the cc has been installed
+- name: Query the chain code
+  include_tasks: '{{ role_path }}/common/queryccinstalled.yml'
+  vars:
+    cclabel: "{{ ccLabel }}"
+
+- name: End the process if ccid was not found
+  when: ccid == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Chaincode Approve, can not find the package id'
+
+- name: 'Approve chaincode {{ ccLabel }}'
+  include_tasks: approvecc.yml

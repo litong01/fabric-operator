@@ -1,4 +1,10 @@
-- name: Get CCID
+# This module query installed chaincode
+# required parameters are
+#    1. must be called from agent
+#    2. peer node info
+#    3. fabric config directory is set at the agentworkdir/config
+#    4. chaincode label
+- name: Query chaincode
   ansible.builtin.shell: |
     set -e
     export FABRIC_CFG_PATH={{ agentworkdir }}/config
@@ -22,7 +28,13 @@
 - name: Find the target chaincode
   set_fact:
     thetarget: >
-      {{ installed.installed_chaincodes | default([]) | selectattr('label', 'equalto', cmetadata.label) | list }}
+      {{ installed.installed_chaincodes | default([]) | selectattr('label', 'equalto', cclabel) | list }}
 
 - set_fact:
     ccid: "{{ (thetarget|length == 0)|ternary('', thetarget[0].package_id) }}"
+
+- when: channelName is defined and channelName != ''
+  set_fact:
+    refid: >-
+      {{ (thetarget|length == 0)|ternary('',
+        (thetarget[0].references|default({channelName: ''}))[channelName] ) }}

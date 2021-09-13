@@ -1,0 +1,47 @@
+# This module query installed chaincode
+# required parameters are
+#    1. must be called from agent
+#    2. peer node info
+#    3. fabric config directory is set at the agentworkdir/config
+#    4. chaincode label
+#    5. channelName
+
+- name: Set cc name and version
+  set_fact:
+    ccName: "{{ cclabel.split('_')[0] }}"
+    ccVersion: "{{ cclabel.split('_')[1] }}"
+
+- name: Query committed chaincode
+  ansible.builtin.shell: |
+    set -e
+    export FABRIC_CFG_PATH={{ agentworkdir }}/config
+    export FABRIC_LOGGING_SPEC=ERROR
+    export CORE_PEER_TLS_ENABLED=true
+    export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+    export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+    export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+    export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+    {{ bindir }}/bin/peer lifecycle chaincode querycommitted -O json -C {{ channelName }} | tee out.json
+  args:
+    chdir: '{{ agentworkdir }}'
+    executable: /bin/bash
+  register: cmdresult
+  ignore_errors: yes
+
+- name: Load the json file
+  set_fact:
+    committed: "{{ lookup('file', agentworkdir+'/out.json') | from_json }}"
+
+- debug:
+    var: committed
+
+- name: Find the target chaincode
+  set_fact:
+    thetarget: >
+      {{ committed.chaincode_definitions | default([]) | selectattr('name', 'equalto', ccName) | list }}
+
+- debug:
+    var: thetarget
+
+- set_fact:
+    sid: "{{ (thetarget|length == 0)|ternary('', thetarget[0].sequence) }}"

@@ -67,7 +67,9 @@
 
 # Check to see if the cc has been installed
 - name: Query the chain code
-  include_tasks: querycc.yml
+  include_tasks: '{{ role_path }}/common/queryccinstalled.yml'
+  vars:
+    cclabel: "{{ cmetadata.label }}"
 
 - name: 'Install chaincode {{ packageName }}'
   when: ccid == ''

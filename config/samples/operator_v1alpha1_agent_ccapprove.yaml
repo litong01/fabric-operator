@@ -1,0 +1,17 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: agent-sample
+spec:
+  organization: example.com
+  cleanup: False
+  actions:
+  - name: ccapprove
+    description: approve the chaincode for the  org
+    parameters:
+      ccLabel: simple_v1.0.0
+      init: True
+      policy:
+      channelName: mychannel
+      peerNode: peer-sample-example-com
+      ordererNode: orderer-sample-example-com

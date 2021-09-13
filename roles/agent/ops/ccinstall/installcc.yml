@@ -19,3 +19,8 @@
   include_tasks: '{{ role_path }}/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Chaincode install failed with error {{ cmdresult.stderr }}'
+
+- name: Query the chain code
+  include_tasks: '{{ role_path }}/common/queryccinstalled.yml'
+  vars:
+    cclabel: "{{ cmetadata.label }}"
