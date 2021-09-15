@@ -120,10 +120,6 @@ Profiles:
       - <<: *{{ mspid }}
       Capabilities:
         <<: *OrdererCapabilities
-    Application:
-      <<: *ApplicationDefaults
-      Organizations:
-      - <<: *{{ mspid }}
     Consortiums:
       FabricConsortium:
         Organizations:
