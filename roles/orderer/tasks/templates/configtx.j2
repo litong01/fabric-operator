@@ -56,7 +56,7 @@ Orderer: &OrdererDefaults
 
   EtcdRaft:
     Consenters:
-    - Host: {{ iporhost }}:{{ EXT_PORTS[0] }}
+    - Host: {{ iporhost }}
       Port: {{ EXT_PORTS[0] }}       
       ClientTLSCert: {{ workdir }}/{{ nodename }}/tls/client.crt
       ServerTLSCert: {{ workdir }}/{{ nodename }}/tls/client.crt
