@@ -1,0 +1,16 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: Agent
+metadata:
+  name: orderorgagent
+  namespace: org1space
+spec:
+  organization: ordererorg.com
+  cleanup: false
+  actions:
+  - name: orgjoin
+    description: produce channel update envelope for new org to join a channel
+    parameters:
+      mspAsset: neworg.json
+      channelName: systemchannel
+      ordererNode: orderer-0-ordererorg-com
+      peerNode: orderer-0-ordererorg-com

@@ -1,0 +1,98 @@
+# This module takes the following parameters
+#     1. targetdir       where the certs will be placed
+#     2. thesecretname   what secret to pull down from
+# thesecretname must be the full name, it is made up by
+# the resource name + '-' + organization name with dot(.)
+# being replaced by dash '-'
+# This module will try to look up the secret and its node
+# then produce the msp, tls and endpoint file under the
+# directory by the secretname for example
+#
+# if the secret is orderer-sample and orgid is example-com
+#
+#    orderer-sample-example-com
+#    orderer-sample-example-com/msp
+#    orderer-sample-example-com/msp/cacerts
+#    orderer-sample-example-com/msp/keystore
+#    orderer-sample-example-com/msp/signcerts
+#    orderer-sample-example-com/msp/tlscacerts
+#    orderer-sample-example-com/tls
+#    orderer-sample-example-com/msp/id.json
+
+- name: Check if name variable is set
+  when: (thesecretname|trim) == ''
+  include_tasks: 'endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - No secret name provided'
+
+- name: Search for the matching node cert secret
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ thesecretname }}-nodecert'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: nodecert_secret
+
+- name: Process when secret was found
+  when: (nodecert_secret.resources|length) > 0
+  block:
+  - name: Search for the node
+    community.kubernetes.k8s_info:
+      kind: "{{ nodecert_secret.resources[0].metadata.labels['fabric-node-type'] }}"
+      api_version: 'operator.fabric.hyperledger.org/v1alpha1'
+      name: '{{ nodecert_secret.resources[0].metadata.ownerReferences[0].name }}'
+      namespace: '{{ ansible_operator_meta.namespace }}'
+    register: realnode
+
+  - name: Update the agent status
+    when: (realnode.resources|length) == 0
+    include_tasks: 'endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - Node {{ nodecert_secret.resources[0].metadata.ownerReferences[0].name }} not found'
+      KIND: "{{ KIND }}"
+
+
+  - name: Set node type
+    set_fact:
+      nodetype: >-
+        {{ ((nodecert_secret.resources[0].metadata.labels['fabric-node-type']|lower)=='ca')|ternary('ca', '') }}
+
+  # Now we get the node cert and save to the working directory
+  - name: Layout node cert information
+    include_tasks: 'layout{{ nodetype }}nodecerts.yml'
+    vars:
+      nodeid: "{{ thesecretname }}"
+      data: "{{ nodecert_secret.resources[0].data }}"
+
+  - name: Create the endpoint and mspid file
+    copy:
+      dest: "{{ targetdir }}/{{ thesecretname }}/msp/id.json"
+      content: >-
+        {{ { 'endpoint': realnode.resources[0].status.endpoint|default('')|replace('grpcs://', ''),
+             'adminendpoint': realnode.resources[0].status.adminendpoint|default('')|replace('https://', ''),
+             'mspid': nodecert_secret.resources[0].metadata.labels['fabric-organization']|replace('.','-')
+           } | to_nice_json(indent=2) }}
+
+- name: Search for the matching node asset secret
+  when: (nodecert_secret.resources|length) == 0
+  block:
+  - name: Try to locate imported orderer node
+    community.kubernetes.k8s_info:
+      kind: Secret
+      api_version: v1
+      name: '{{ thesecretname }}-asset'
+      namespace: '{{ ansible_operator_meta.namespace }}'
+    register: asset_secret
+
+  - name: Update the crd status to fail
+    when: (asset_secret.resources|length) == 0
+    include_tasks: 'endplay.yml'
+    vars:
+      RESULT_MSG: 'Failed - Secret {{ thesecretname }}-asset not found'
+
+  # Now we get the asset cert and save to the working directory
+  - name: Layout asset information
+    include_tasks: 'layoutassetcerts.yml'
+    vars:
+      nodeid: "{{ thesecretname }}"
+      data: "{{ asset_secret.resources[0].data }}"

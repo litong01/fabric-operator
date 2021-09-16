@@ -1,0 +1,65 @@
+- name: Search for the matching secret for the genesis file
+  community.kubernetes.k8s_info:
+    kind: Secret
+    api_version: v1
+    name: '{{ genesisfile }}'
+    namespace: '{{ ansible_operator_meta.namespace }}'
+  register: genesissecret
+
+- name: Create one if there is none
+  when: (genesissecret.resources|length) == 0
+  block:
+  - name: Setup bindir and workdir
+    set_fact:
+      bindir: "{{ lookup('env','HOME') }}/agent/{{ release }}"
+      workdir: "{{ lookup('env','HOME') }}/orderer/{{ 99999999 | random | to_uuid }}"
+
+  - name: Get orderer node info
+    include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
+    vars:
+      targetdir: "{{ workdir }}"
+      KIND: 'Orderer'
+      thesecretname: "{{ nodecertname }}-{{ organization|replace('.','-') }}"
+
+  - name: Retrieve additional org certs
+    when: additionalOrgs|length > 0
+    include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
+    vars:
+      targetdir: "{{ workdir }}"
+      KIND: 'Orderer'
+    loop: "{{ additionalOrgs }}"
+    loop_control:
+      loop_var: thesecretname
+
+  - name: Get fabric tools
+    include_tasks: getbin.yml
+
+  - name: Create the configtx
+    template:
+      src: '{{ role_path }}/tasks/templates/configtx.j2'
+      dest: '{{ workdir }}/config/configtx.yaml'
+    vars:
+      thesecretname: "{{ nodecertname }}-{{ organization|replace('.','-') }}"
+
+  - name: Create the genesis block
+    ansible.builtin.shell: |
+      {{ bindir }}/bin/configtxgen -profile SystemChannel \
+      -outputBlock genesis.block --channelID systemchannel
+    args:
+      chdir: '{{ workdir }}/config'
+      executable: /bin/bash
+
+  - name: Create genesis block secret
+    community.kubernetes.k8s:
+      definition:
+        kind: Secret
+        apiVersion: v1
+        metadata:
+          name: '{{ genesisfile }}'
+          namespace: '{{ ansible_operator_meta.namespace }}'
+          labels:
+            fabric-node-type: Genesisfile
+            fabric-organization: '{{ organization }}'
+        type: Opaque
+        data:
+          block: "{{ lookup('file', workdir+'/config/genesis.block') | b64encode }}"

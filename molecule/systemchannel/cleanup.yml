@@ -1,0 +1,57 @@
+---
+# This module basically setup various ca, orderer, peer nodes for
+# an organization.
+- name: Create
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+# Setup the first organization
+  - name: Load the first org configuration file
+    include_vars:
+      file: ".orderer.yml"
+
+  - name: Switch to the test namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - name: Delete the nodes
+    include_tasks: ../basesystem/tasks/orgs.yml
+    vars:
+      state: absent
+
+  - name: Delete the namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+      state: absent
+
+# Set up the second organization
+  - name: Load the first org configuration file
+    include_vars:
+      file: ".peer1.yml"
+
+  - name: Switch to the test namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+
+  - name: Delete nodes
+    include_tasks: ../basesystem/tasks/orgs.yml
+    vars:
+      state: absent
+
+  - name: Delete the namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: '{{ namespace }}'
+      kubeconfig: '{{ kubeconfig }}'
+      state: absent

@@ -1,0 +1,12 @@
+orgname: "example.com"
+ca_prefix: "ca"
+number_of_ca: 1
+orderer_prefix: "orderer"
+number_of_orderer_legacy: 1
+number_of_orderer: 0
+peer_prefix: "peer"
+number_of_peer: 1
+orderernode: "orderer-0-example-com"
+peernode: "peer-0-example-com"
+agentname: "ordereragent"
+namespace: "ordererspace"

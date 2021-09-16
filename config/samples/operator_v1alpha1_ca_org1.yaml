@@ -1,0 +1,11 @@
+apiVersion: operator.fabric.hyperledger.org/v1alpha1
+kind: CA
+metadata:
+  name: org1ca
+spec:
+  # Add fields here
+  organization: org1.example.com
+  nodeCert:
+  release: 1.5.0
+  storage: 1Gi
+  logLevel: DEBUG

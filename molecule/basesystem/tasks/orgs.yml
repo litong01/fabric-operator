@@ -5,8 +5,9 @@
   set_fact:
     resstate: "{{ state|default('present') }}"
     allnodes: >-
-      {{ [{'type':'ca', 'no': number_of_ca, 'prefix': ca_prefix},
-          {'type':'orderer', 'no': number_of_orderer, 'prefix': orderer_prefix}, 
+      {{ [{'type': 'ca', 'no': number_of_ca, 'prefix': ca_prefix},
+          {'type': 'orderer', 'no': number_of_orderer|default(0), 'prefix': orderer_prefix},
+          {'type': 'orderer_legacy', 'no': number_of_orderer_legacy|default(0), 'prefix': orderer_prefix},
           {'type':'peer', 'no': number_of_peer, 'prefix': peer_prefix} ] }}
 
 - name: Create ca, orderer, peer node based on configuration

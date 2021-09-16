@@ -1,0 +1,154 @@
+Organizations:
+- &{{ mspid }}
+  Name: {{ mspid }}
+  ID: {{ mspid }}
+  MSPDir: {{ workdir }}/{{ thesecretname }}/msp
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('{{ mspid }}.admin', '{{ mspid }}.peer', '{{ mspid }}.orderer')"
+    Writers:
+      Type: Signature
+      Rule: "OR('{{ mspid }}.admin', '{{ mspid }}.peer', '{{ mspid }}.orderer')"
+    Admins:
+      Type: Signature
+      Rule: "OR('{{ mspid }}.admin')"
+    Endorsement:
+      Type: Signature
+      Rule: "OR('{{ mspid }}.peer')"
+  OrdererEndpoints:
+  - {{ iporhost }}:{{ EXT_PORTS[0] }}
+
+{% for org in additionalOrgs %}
+{% set theattr = (lookup('file', workdir+'/'+org+'/msp/id.json')|from_json)  %}
+- &{{ theattr.mspid }}
+  Name: {{ theattr.mspid }}
+  ID: {{ theattr.mspid }}
+  MSPDir: {{ workdir }}/{{ org }}/msp
+  Policies:
+    Readers:
+      Type: Signature
+      Rule: "OR('{{ theattr.mspid }}.admin', '{{ theattr.mspid }}.peer', '{{ theattr.mspid }}.orderer')"
+    Writers:
+      Type: Signature
+      Rule: "OR('{{ theattr.mspid }}.admin', '{{ theattr.mspid }}.peer', '{{ theattr.mspid }}.orderer')"
+    Admins:
+      Type: Signature
+      Rule: "OR('{{ theattr.mspid }}.admin')"
+    Endorsement:
+      Type: Signature
+      Rule: "OR('{{ theattr.mspid }}.peer')"
+
+{% endfor %}
+
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+
+  Capabilities:
+    <<: *ApplicationCapabilities
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+  - {{ iporhost }}:{{ EXT_PORTS[0] }}
+
+  EtcdRaft:
+    Consenters:
+    - Host: {{ iporhost }}
+      Port: {{ EXT_PORTS[0] }}       
+      ClientTLSCert: {{ workdir }}/{{ thesecretname }}/tls/client.crt
+      ServerTLSCert: {{ workdir }}/{{ thesecretname }}/tls/client.crt
+
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 10
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+
+  Organizations:
+
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  ApplicationGenesis:
+    Consortium: FabricConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+      - <<: *{{ mspid }}
+      Capabilities:
+        <<: *ApplicationCapabilities
+
+  SystemChannel:
+    <<: *ChannelDefaults
+    Capabilities:
+      <<: *ChannelCapabilities
+    Orderer:
+      <<: *OrdererDefaults
+      OrdererType: etcdraft
+      Organizations:
+      - <<: *{{ mspid }}
+      Capabilities:
+        <<: *OrdererCapabilities
+    Consortiums:
+      FabricConsortium:
+        Organizations:
+        - *{{ mspid }}
+{% for org in additionalOrgs %}
+{% set theattr = (lookup('file', workdir+'/'+org+'/msp/id.json')|from_json) %}
+        - *{{ theattr.mspid }}
+{% endfor %}
+

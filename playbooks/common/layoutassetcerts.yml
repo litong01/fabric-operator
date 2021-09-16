@@ -1,0 +1,82 @@
+# This module layout certs in the msp structure
+# The input must be the following
+#    nodeid - indicate what nodeid is
+#    data - the asset data out of the secret
+
+- name: Check if name variable is set
+  when: nodeid == '' or data == None or data.asset == None
+  include_tasks: 'endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - No nodeid or data provided'
+
+- name: Get the imported node asset from the secret
+  set_fact:
+    assetobj: '{{ data.asset | b64decode | from_json }}'
+
+- name: Set up user msp directory
+  file:
+    path: '{{ targetdir }}/{{ item }}'
+    state: 'directory'
+    mode: 0775
+  with_items:
+  - '{{ nodeid }}'
+  - '{{ nodeid }}/msp'
+  - '{{ nodeid }}/msp/cacerts'
+  - '{{ nodeid }}/msp/signcerts'
+  - '{{ nodeid }}/msp/tlscacerts'
+  - '{{ nodeid }}/tls'
+
+- name: Process MSP data
+  when: assetobj.type == 'msp'
+  copy:
+    content: '{{ item.src|b64decode }}'
+    dest: '{{ targetdir }}/{{ nodeid }}/{{ item.dest }}'
+  with_items:
+  - "{{ { 'src': assetobj.root_certs[0],      'dest': 'msp/cacerts/ca.pem'} }}"
+  - "{{ { 'src': assetobj.admins[0],          'dest': 'msp/signcerts/user.crt'} }}"
+  - "{{ { 'src': assetobj.root_certs[0],      'dest': 'msp/tlscacerts/ca.crt'} }}"
+  - "{{ { 'src': assetobj.tls_root_certs[0],  'dest': 'tls/ca.crt'} }}"
+
+- name: Process orderer and peer data
+  when: assetobj.type in ('fabric-orderer', 'fabric-peer')
+  block:
+  - name: Get the node endpoint and cert
+    set_fact:
+      endpoint: "{{ assetobj['api_url'] }}"
+
+  - name: Create the certificates on the working directory
+    copy:
+      content: '{{ item.src|b64decode }}'
+      dest: '{{ targetdir }}/{{ nodeid }}/{{ item.dest }}'
+    with_items:
+    - "{{ { 'src': assetobj.msp.ca.root_certs[0],  'dest': 'msp/cacerts/ca.pem'} }}"
+    - "{{ { 'src': assetobj.pem,                   'dest': 'msp/signcerts/user.crt'} }}"
+    - "{{ { 'src': assetobj.tls_ca_root_cert,      'dest': 'msp/tlscacerts/ca.crt'} }}"
+    - "{{ { 'src': assetobj.tls_ca_root_cert,      'dest': 'tls/ca.crt'} }}"
+    - "{{ { 'src': assetobj.tls_cert,              'dest': 'tls/server.crt'} }}"
+
+  - name: Create the config.yaml file
+    copy:
+      dest: "{{ targetdir }}/{{ nodeid }}/msp/config.yaml"
+      content: >-
+        NodeOUs:
+          Enable: true
+          ClientOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: client
+          PeerOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: peer
+          AdminOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: admin
+          OrdererOUIdentifier:
+            Certificate: cacerts/ca.pem
+            OrganizationalUnitIdentifier: orderer
+  
+  - name: Create the endpoint and mspid file
+    copy:
+      dest: "{{ targetdir }}/{{ nodeid }}/msp/id.json"
+      content: >-
+        {{ { 'endpoint': assetobj.api_url|replace('grpcs://', ''),
+             'mspid': assetobj.msp_id } | to_nice_json(indent=2) }}
