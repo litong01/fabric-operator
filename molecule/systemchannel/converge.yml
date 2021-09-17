@@ -321,3 +321,19 @@
     vars:
       failmsg: Fabric Agent channel query failed
       successmsg: Fabric Agent channel query succeeded
+
+  - name: Create a console for orderer org
+    community.kubernetes.k8s:
+      state: present
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'console.j2'
+      consolename: 'orderorgconsole'

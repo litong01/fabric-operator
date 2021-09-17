@@ -7,11 +7,11 @@
   gather_facts: false
   tasks:
 # Setup the first organization
-  - name: Load the first org configuration file
+  - name: Load the orderer org configuration file
     include_vars:
       file: ".orderer.yml"
 
-  - name: Switch to the test namespace
+  - name: Switch to the orderer org namespace
     community.kubernetes.k8s:
       api_version: v1
       kind: Namespace
@@ -22,6 +22,24 @@
     include_tasks: ../basesystem/tasks/orgs.yml
     vars:
       state: absent
+
+  - name: Create a console for orderer org
+    community.kubernetes.k8s:
+      state: absent
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+tp_file) | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+    vars:
+      tp_file: 'console.j2'
+      consolename: 'orderorgconsole'
+
+
 
   - name: Delete the namespace
     community.kubernetes.k8s:
@@ -55,3 +73,4 @@
       name: '{{ namespace }}'
       kubeconfig: '{{ kubeconfig }}'
       state: absent
+
