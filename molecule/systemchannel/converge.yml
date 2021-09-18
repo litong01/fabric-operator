@@ -70,6 +70,8 @@
         type: Running
         reason: Successful
         status: "True"
+    vars:
+      includewallets: 'yes'
     loop:
     - 'agent_assetgen.j2'
     loop_control:
@@ -225,6 +227,8 @@
         type: Running
         reason: Successful
         status: "True"
+    vars:
+      includewallets: 'yes'
     loop:
     - 'agent_assetgen.j2'
     loop_control:
