@@ -123,7 +123,7 @@ Channel: &ChannelDefaults
 
 Profiles:
   ApplicationGenesis:
-    Consortium: FabricConsortium
+    Consortium: SampleConsortium
     <<: *ChannelDefaults
     Application:
       <<: *ApplicationDefaults
@@ -144,7 +144,7 @@ Profiles:
       Capabilities:
         <<: *OrdererCapabilities
     Consortiums:
-      FabricConsortium:
+      SampleConsortium:
         Organizations:
         - *{{ mspid }}
 {% for org in additionalOrgs %}
