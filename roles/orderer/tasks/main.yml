@@ -75,8 +75,8 @@
           port: 7080
           targetPort: 7080
         - name: grpcproxy
-          port: 8443
-          targetPort: 8443
+          port: 8445
+          targetPort: 8445
         - name: operationport
           port: 7060
           targetPort: 7060
