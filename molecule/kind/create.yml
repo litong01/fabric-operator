@@ -15,5 +15,5 @@
     - { 'action': 'remove', 'policy': 'Always' }
     - { 'action': 'remove', 'policy': 'IfNotPresent' }
     - { 'action': 'remove', 'policy': 'Never' }
-    - { 'action': 'remove', 'policy': '{{ operator_pull_policy }}' }
+    - { 'action': 'add', 'policy': '{{ operator_pull_policy }}' }
 

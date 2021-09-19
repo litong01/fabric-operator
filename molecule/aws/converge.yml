@@ -4,6 +4,17 @@
   connection: local
   gather_facts: no
   tasks:
+
+  - name: Unset pull policy
+    command: '{{ kustomize }} edit {{ item.action }} patch pull_policy/{{ item.policy }}.yaml'
+    args:
+      chdir: '{{ config_dir }}/testing'
+    with_items:
+    - { 'action': 'remove', 'policy': 'Always' }
+    - { 'action': 'remove', 'policy': 'IfNotPresent' }
+    - { 'action': 'remove', 'policy': 'Never' }
+    - { 'action': 'add', 'policy': '{{ operator_pull_policy }}' }
+
   - name: Deploy nginx ingress controller
     command: >-
       kubectl --kubeconfig {{ kubeconfig }} apply

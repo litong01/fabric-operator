@@ -22,26 +22,65 @@
     vars:
       state: present
 
-  # Create a channel and query channel
-  - name: Create, join and query the channel
+  - name: Create the channel from the orderer org
     community.kubernetes.k8s:
       state: "present"
       namespace: '{{ namespace }}'
       definition: >-
-        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/agent_channelcreate_legacy.j2') | from_yaml }}
       wait: yes
       wait_timeout: 300
       wait_condition:
         type: Running
         reason: Successful
         status: "True"
-    loop:
-    - 'agent_channelcreate_legacy.j2'
-    - 'agent_channeljoin.j2'
-    - 'agent_channelquery.j2'
-    loop_control:
-      loop_var: action
 
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: Fabric Agent legacy channel create failed
+      successmsg: Fabric Agent legacy channel create succeeded
+
+
+  - name: Join the channel from the orderer org
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/agent_channeljoin.j2') | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: Fabric Agent channel join failed
+      successmsg: Fabric Agent legacy channel join succeeded
+
+  - name: Query the channel from orderer org
+    community.kubernetes.k8s:
+      state: "present"
+      namespace: '{{ namespace }}'
+      definition: >-
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/agent_channelquery.j2') | from_yaml }}
+      wait: yes
+      wait_timeout: 300
+      wait_condition:
+        type: Running
+        reason: Successful
+        status: "True"
+
+  - name: Verify previous operation
+    include_tasks: ../basesystem/tasks/queryverify.yml
+    vars:
+      failmsg: Fabric Agent channel query failed
+      successmsg: Fabric Agent legacy channel query succeeded
+
+# Switch to the peer org now
   - name: Load the peer org configuration file
     include_vars:
       file: ".peer1.yml"
@@ -63,7 +102,7 @@
       state: "present"
       namespace: '{{ namespace }}'
       definition: >-
-        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/'+action) | from_yaml }}
+        {{ lookup('template', project_dir+'/molecule/basesystem/tasks/templates/agent_assetgen.j2') | from_yaml }}
       wait: yes
       wait_timeout: 300
       wait_condition:
@@ -72,10 +111,6 @@
         status: "True"
     vars:
       includewallets: 'yes'
-    loop:
-    - 'agent_assetgen.j2'
-    loop_control:
-      loop_var: action
 
   - name: Query the agent
     community.kubernetes.k8s_info:
