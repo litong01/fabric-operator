@@ -1,4 +1,4 @@
-- name: Process nodes
+- name: "Make nodes to be {{ resstate }}"
   community.kubernetes.k8s:
     state: "{{ resstate }}"
     namespace: '{{ namespace }}'
@@ -15,7 +15,7 @@
   loop_control:
     loop_var: nodeindex
 
-- name: Process nodes
+- name: Wait for nodes to be ready
   when: resstate == 'present'
   community.kubernetes.k8s_info:
     kind: Pod
