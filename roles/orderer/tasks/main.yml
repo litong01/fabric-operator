@@ -41,18 +41,16 @@
         organization: "{{ organization }}"
         nodeType: Orderer
 
-- name: Retrieve the node cert
+- name: Retrieve the node cert secret to make sure it exists
   community.kubernetes.k8s_info:
-    kind: Nodecert
+    kind: Secret
     api_version: v1
-    name: "{{ nodecertname }}"
+    name: "{{ nodecertsecretname }}"
     namespace: '{{ ansible_operator_meta.namespace }}'
     wait: yes
-    wait_condition:
-      type: Running
-      status: "True"
-    wait_sleep: 3
+    wait_sleep: 5
     wait_timeout: 120
+  register: nodesecret
 
 - name: start orderer node service
   community.kubernetes.k8s:

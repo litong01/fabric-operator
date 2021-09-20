@@ -189,8 +189,10 @@
             containers:
             - name: health
               image: email4tong/pathecho:v1.0.0
+              imagePullPolicy: Always
               env:
               - { name: "PORT", value: "7061" }
+              - { name: "version", value: "http://localhost:7056/version" }
             - name: grpcproxy
               image: ghcr.io/hyperledger-labs/grpc-web:latest
               env:
@@ -247,6 +249,8 @@
               - { name: "CORE_PEER_LISTENADDRESS",            value: "0.0.0.0:7051" }
               - { name: "CORE_PEER_LOCALMSPID",               value: "{{ mspid }}" }
               - { name: "CORE_CHAINCODE_LOGGING_LEVEL",       value: "{{ log_level }}" }
+              - { name: "CORE_OPERATIONS_LISTENADDRESS", value: "0.0.0.0:7056" }
+              - { name: "CORE_OPERATIONS_TLS_ENABLED",   value: "false" }
               volumeMounts:
               - { mountPath: "/var/hyperledger/fabric/msp", name: "nodecert" }
               - { mountPath: "/var/hyperledger/fabric/tls", name: "nodetlscert" }
