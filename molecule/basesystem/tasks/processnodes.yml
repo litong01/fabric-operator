@@ -14,3 +14,19 @@
   loop: "{{ range(0, fabricnode.no) | list }}"
   loop_control:
     loop_var: nodeindex
+
+- name: Process nodes
+  when: resstate == 'present'
+  community.kubernetes.k8s_info:
+    kind: Pod
+    name: "{{ fabricnode.prefix }}-{{ nodeindex }}-0"
+    namespace: '{{ namespace }}'
+    wait: yes
+    wait_sleep: 10
+    wait_timeout: 60
+    wait_condition:
+      type: Ready
+      status: "True"
+  loop: "{{ range(0, fabricnode.no) | list }}"
+  loop_control:
+    loop_var: nodeindex
