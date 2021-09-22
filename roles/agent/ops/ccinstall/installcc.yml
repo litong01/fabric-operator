@@ -7,7 +7,7 @@
     export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
     export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
     export CORE_PEER_ADDRESS={{ peerid.endpoint }}
-    {{ bindir }}/bin/peer lifecycle chaincode install {{ packageName }}
+    {{ bindir }}/bin/peer lifecycle chaincode install {{ packageName }} --connTimeout 120s
   args:
     chdir: '{{ agentworkdir }}'
     executable: /bin/bash

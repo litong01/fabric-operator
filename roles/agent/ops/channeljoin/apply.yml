@@ -67,7 +67,7 @@
     export CORE_PEER_ADDRESS={{ peerid.endpoint }}
     {{ bindir }}/bin/peer channel fetch oldest config_block.bk \
     --tls -c {{ channelName }} -o {{ ordererid.endpoint }} \
-    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt --connTimeout 120s
   args:
     chdir: '{{ agentworkdir }}'
     executable: /bin/bash
@@ -90,7 +90,7 @@
     export CORE_PEER_ADDRESS={{ peerid.endpoint }}
     {{ bindir }}/bin/peer channel join -b config_block.bk \
     --tls -o {{ ordererid.endpoint }} \
-    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt --connTimeout 120s
   args:
     chdir: '{{ agentworkdir }}'
     executable: /bin/bash

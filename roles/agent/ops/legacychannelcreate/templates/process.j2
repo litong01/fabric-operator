@@ -18,7 +18,7 @@ export CORE_PEER_ADDRESS={{ ordererid.endpoint }}
 # 3. Create the channel
 {{ bindir }}/bin/peer channel create -c {{ channelName }} \
     -f {{ channelName }}.tx -o {{ ordererid.endpoint }} \
-    --cafile {{ agentworkdir }}/{{ ordererNode}}/tls/ca.crt --tls
+    --cafile {{ agentworkdir }}/{{ ordererNode}}/tls/ca.crt --tls --connTimeout 120s
 
 # 4. Copy the signed envelope to the download and upload directory
 cp {{ channelName }}.tx {{ downloaddir }}

@@ -63,7 +63,7 @@
     export CORE_PEER_ADDRESS={{ ordererid.endpoint }}
     {{ bindir }}/bin/peer channel fetch config config_block.bk \
     --tls -c {{ channelName }} -o {{ ordererid.endpoint }} \
-    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt --connTimeout 120s
     {{ bindir }}/bin/configtxlator proto_decode --input config_block.bk \
     --type common.Block | jq .data.data[0].payload.data.config > {{ channelName}}_config.json
     cp {{ channelName}}_config.json ~/agent/download

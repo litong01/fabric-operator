@@ -11,7 +11,7 @@ export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
 export CORE_PEER_ADDRESS={{ peerid.endpoint }}
 
 # 2. Sign channel update envelope
-{{ bindir }}/bin/peer channel signconfigtx -f {{ channelName }}_update_envelope.pb
+{{ bindir }}/bin/peer channel signconfigtx -f {{ channelName }}_update_envelope.pb --connTimeout 120s
 
 # 3. Copy the signed envelope to the download and upload directory
 cp {{ channelName }}_update_envelope.pb {{ downloaddir }}

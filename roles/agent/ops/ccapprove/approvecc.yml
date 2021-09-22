@@ -21,7 +21,7 @@
     --name {{ ccName }} --version {{ ccVersion }} --sequence {{ ccSequence }} \
     --tls {{ init|ternary('--init-required', '') }} \
     --package-id {{ ccid }} -o {{ ordererid.endpoint }} \
-    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt --connTimeout 120s
   args:
     chdir: '{{ agentworkdir }}'
     executable: /bin/bash

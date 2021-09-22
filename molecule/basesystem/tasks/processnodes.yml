@@ -23,7 +23,7 @@
     namespace: '{{ namespace }}'
     wait: yes
     wait_sleep: 10
-    wait_timeout: 60
+    wait_timeout: 120
     wait_condition:
       type: Ready
       status: "True"

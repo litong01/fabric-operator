@@ -91,7 +91,7 @@
     export CORE_PEER_ADDRESS={{ peerid.endpoint }}
     {{ bindir }}/bin/peer channel update -f {{ channelName }}_update_envelope.pb \
     -c {{ channelName }} --tls -o {{ ordererid.endpoint }} \
-    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt
+    --cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt --connTimeout 120s
   args:
     chdir: '{{ agentworkdir }}'
     executable: /bin/bash
