@@ -1,0 +1,20 @@
+#!/bin/bash
+set -e
+export FABRIC_CFG_PATH={{ agentworkdir }}/config
+export CORE_PEER_TLS_ENABLED=true
+export CORE_PEER_LOCALMSPID={{ peerid.mspid }}
+export CORE_PEER_TLS_ROOTCERT_FILE={{ agentworkdir }}/{{ peerNode }}/tls/ca.crt
+export CORE_PEER_MSPCONFIGPATH={{ agentworkdir }}/{{ peerNode }}/msp
+export CORE_PEER_ADDRESS={{ peerid.endpoint }}
+{{ bindir }}/bin/peer chaincode invoke {{ isInit | ternary('--isInit', '') }} \
+-o {{ ordererid.endpoint }} \
+--cafile {{ agentworkdir }}/{{ ordererNode }}/tls/ca.crt --connTimeout 120s \
+--peerAddresses {{ peerid.endpoint }} \
+--tlsRootCertFiles {{ agentworkdir }}/{{ peerNode }}/tls/ca.crt \
+{% for apeer in additionalPeerNodes %}
+{% set apeerid = (lookup('file', agentworkdir+'/'+apeer+'/msp/id.json') | from_json) %}
+--peerAddresses {{ apperid.endpoint }} \
+--tlsRootCertFiles {{ agentworkdir }}/{{ apeer }}/tls/ca.crt \
+{% endfor %}
+-c '{"Args":[ {{ ccArgs }} ]}' \
+-C {{ channelName }} --name {{ ccName }} --tls --waitForEvent

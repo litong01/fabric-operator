@@ -1,0 +1,91 @@
+# To create a new channel, an action must look like this
+#
+# spec:
+#   organization: example.com
+#   actions:
+#   - name: ccinvoke
+#     description: invoke a chaincode method
+#     parameters:
+#       ccName: simple
+#       ccVersion: v1.0.0
+#       isInit: false
+#       channelName: mychannel
+#       peerNode: peer-sample-example-com
+#       additionalPeerNodes: []
+#       ordererNode: orderer-sample-example-com
+#       args: []
+#
+# the args has to be single quoted strings
+
+- name: Get variable with their names
+  set_fact:
+    ccName: "{{ action.parameters.cc_name }}"
+    isInit: "{{ action.parameters.is_init | default(false) }}"
+    channelName: "{{ action.parameters.channel_name }}"
+    peerNode: "{{ action.parameters.peer_node }}"
+    additionalPeerNodes: "{{ action.parameters.additional_peer_nodes | default([]) }}"
+    ordererNode: "{{ action.parameters.orderer_node }}"
+    ccArgs: "{{ action.parameters.args }}"
+
+- name: End the process if either variable is empty
+  when: ccName == '' or peerNode == 0 or channelName == '' or ordererNode == ''
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: 'Failed - Chaincode name, peer nodes, channel name and orderer node all must be provided'
+
+- name: Mark the start of the agent
+  include_tasks: '{{ role_path }}/common/startplay.yml'
+
+- name: Get orderer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ ordererNode }}"
+
+- name: Get orderer node admin endpoint
+  set_fact:
+    ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
+
+- name: Get peer node info
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  vars:
+    thesecretname: "{{ peerNode }}"
+
+- name: Get peer node admin endpoint
+  set_fact:
+    peerid: "{{ lookup('file', agentworkdir+'/'+peerNode+'/msp/id.json') | from_json }}"
+
+# This is to layout all additional peer node endpoint and certs
+- name: Get additional peer node info
+  when: (additionalPeerNodes | length) > 0
+  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  loop: "{{ additionalPeerNodes }}"
+  loop_control:
+    loop_var: thesecretname
+
+- name: Get core yaml files
+  copy:
+    src: '{{ bindir }}/config'
+    dest: '{{ agentworkdir }}' 
+
+- name: Generate the chaincode invocation script
+  template:
+    src: "{{ role_path }}/ops/ccinvoke/templates/process.j2"
+    dest: "{{ agentworkdir }}/process.sh"
+    mode: +x
+
+- name: Invoke the chaincode
+  ansible.builtin.command: "{{ agentworkdir }}/process.sh"
+  args:
+    chdir: '{{ agentworkdir }}'
+  register: cmdresult
+  ignore_errors: yes
+
+- debug:
+    var: cmdresult
+
+- name: Update the resource status
+  include_tasks: '{{ role_path }}/common/endplay.yml'
+  vars:
+    RESULT_MSG: >-
+      {{ (cmdresult.failed == False)|ternary('Succeeded - Chaincode Invoke',
+         'Failed - Chaincode invoke with error {{ cmdresult.stderr }}') }}
