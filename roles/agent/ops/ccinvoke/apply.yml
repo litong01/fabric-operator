@@ -29,26 +29,30 @@
 
 - name: End the process if either variable is empty
   when: ccName == '' or peerNode == 0 or channelName == '' or ordererNode == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Chaincode name, peer nodes, channel name and orderer node all must be provided'
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Get orderer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get orderer node admin endpoint
   set_fact:
     ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
 
 - name: Get peer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ peerNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get peer node admin endpoint
   set_fact:
@@ -57,7 +61,9 @@
 # This is to layout all additional peer node endpoint and certs
 - name: Get additional peer node info
   when: (additionalPeerNodes | length) > 0
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
+  vars:
+    targetdir: "{{ agentworkdir }}"
   loop: "{{ additionalPeerNodes }}"
   loop_control:
     loop_var: thesecretname
@@ -84,7 +90,7 @@
     var: cmdresult
 
 - name: Update the resource status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: >-
       {{ (cmdresult.failed == False)|ternary('Succeeded - Chaincode Invoke',

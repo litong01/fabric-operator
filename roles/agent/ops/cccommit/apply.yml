@@ -27,12 +27,14 @@
 
 - name: End the process if either variable is empty
   when: ccLabel == '' or peerNode == '' or channelName == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Chaincode label, peer node and channel name all must be provided'
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Set cc name and version
   set_fact:
@@ -40,18 +42,20 @@
     ccVersion: "{{ ccLabel.split('_')[1] }}"
 
 - name: Get orderer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get orderer node admin endpoint
   set_fact:
     ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
 
 - name: Get peer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ peerNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get peer node admin endpoint
   set_fact:

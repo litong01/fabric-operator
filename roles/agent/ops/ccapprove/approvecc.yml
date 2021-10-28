@@ -32,7 +32,7 @@
     var: cmdresult
 
 - name: Update the resource status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: >-
       {{ (cmdresult.failed == False)|ternary('Succeeded - Chaincode Approve',

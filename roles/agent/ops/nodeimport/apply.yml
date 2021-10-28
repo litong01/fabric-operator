@@ -18,7 +18,7 @@
 
 - name: End the process if asset name was not provided
   when: assetname == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - asset zip file name must be provided for node import'
 
@@ -29,7 +29,7 @@
 
 - name: End the process if file does not exist
   when: not assetfile.stat.exists
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - asset zip file does not exist, upload first'
     UPLOADLOAD_MSG: >-
@@ -37,7 +37,9 @@
       {{ podname }}:{{ uploaddir }}/{{ assetname }}
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Unpackage all the assets to the work directory
   unarchive:
@@ -59,6 +61,6 @@
     loop_var: asset
 
 - name: Update the crd status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Succeeded - Assets have been imported'

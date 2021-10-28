@@ -17,7 +17,7 @@
 
 - name: End the process if either variable is empty
   when: packageName == '' or peerNode == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Chaincode package name, peer node all must be provided'
 
@@ -29,17 +29,20 @@
 # Process the uploaded file
 - name: Process the uploaded file
   when: not ccfile.stat.exists
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Chaincode package file {{ packageName }} must be placed in the upload directory'
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Get peer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ peerNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get peer node admin endpoint
   set_fact:
@@ -99,7 +102,7 @@
     ignore_errors: yes
 
 - name: Update the resource status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: >-
       {{ (cmdresult.failed == False)|ternary('Succeeded - Chaincode install',

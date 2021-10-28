@@ -34,7 +34,7 @@
 
 - name: End the process if asset name was not provided
   when: envelopeFile == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - envelope file must be provided for channel update'
 
@@ -45,12 +45,14 @@
 
 - name: End the process when envelope file does not exist
   when: not configfile.stat.exists
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - envolope file {{ envelopeFile }} must be uploaded for channel update'
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Get envolope file
   copy:
@@ -59,18 +61,20 @@
 
 # Now we get the orderer node info from either nodecert or node asset
 - name: Get orderer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get orderer node admin endpoint
   set_fact:
     ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
 
 - name: Get peer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ peerNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get peer node admin endpoint
   set_fact:
@@ -99,7 +103,7 @@
   ignore_errors: yes
 
 - name: Update the resource status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: >-
       {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel Update',

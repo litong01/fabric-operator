@@ -38,7 +38,7 @@
 
 - name: End the process if asset name was not provided
   when: newconfig == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - new channel configuration json file must be provided for channel changes'
 
@@ -49,12 +49,14 @@
 
 - name: End the process when new configuration file does not exist
   when: not configfile.stat.exists
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - new channel configuration json file {{ newconfig }} must be uploaded for channel changes'
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Get new configuration json file
   copy:
@@ -63,18 +65,20 @@
 
 # Now we get the orderer node info from either nodecert or node asset
 - name: Get orderer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get orderer node admin endpoint
   set_fact:
     ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
 
 - name: Get peer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ peerNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get peer node admin endpoint
   set_fact:
@@ -100,12 +104,12 @@
 
 - name: Update the resource status
   when: cmdresult.rc != 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: "Failed - Channel Change. {{ cmdresult.stderr }}"
 
 - name: Update the crd status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Succeeded - Channel Change'
     DOWNLOAD_MSG: >-

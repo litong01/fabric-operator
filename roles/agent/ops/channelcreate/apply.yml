@@ -25,17 +25,20 @@
 
 - name: End the process if either variable is empty
   when: channelName == '' or ordererNode == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Both channel name and orderer node must be provided'
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Layout orderer node certs based on the secret
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Copy original config to working directory
   copy:
@@ -45,7 +48,9 @@
 # Getting additional orgs certs
 - name: Layout additional org certs
   when: additionalOrgs|length > 0
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
+  vars:
+    targetdir: "{{ agentworkdir }}"
   loop: '{{ additionalOrgs }}'
   loop_control: 
     loop_var: thesecretname
@@ -72,7 +77,7 @@
 
 - name: Update the resource status
   when: cmdresult.rc != 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: "Failed - {{ cmdresult.stderr }}"
 
@@ -91,7 +96,7 @@
   ignore_errors: yes
 
 - name: Update the resource status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: >-
       {{ (cmdresult.rc == 0)|ternary('Succeeded - Channel '+channelName+' was created',

@@ -8,6 +8,7 @@
   include_tasks: 'endplay.yml'
   vars:
     RESULT_MSG: 'Failed - No nodeid or data provided'
+    KIND: "{{ KIND }}"
 
 - name: Get the imported node asset from the secret
   set_fact:

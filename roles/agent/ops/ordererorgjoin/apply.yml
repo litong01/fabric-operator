@@ -57,12 +57,14 @@
 
 - name: End the process if asset name was not provided
   when: mspAsset == ''
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - The asset id must be provided for adding a new organization'
 
 - name: Mark the start of the agent
-  include_tasks: '{{ role_path }}/common/startplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/startplay.yml'
+  vars:
+    KIND: Agent
 
 - name: Check if the asset file exists
   stat:
@@ -87,7 +89,7 @@
 
   - name: Update the crd status to fail
     when: cmdresult.failed == True
-    include_tasks: '{{ role_path }}/common/endplay.yml'
+    include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
     vars:
       RESULT_MSG: 'Failed - Orderer Org Join, file is not a valid json file'
 
@@ -98,7 +100,7 @@
 
   - name: Update the crd status to fail
     when: (isOrgRequest and isAsset) or (isOrgRequest==False and isAsset==False)
-    include_tasks: '{{ role_path }}/common/endplay.yml'
+    include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
     vars:
       RESULT_MSG: 'Failed - Orderer Org Join, the asset file may have been in a wrong format'
 
@@ -122,7 +124,7 @@
 
   - name: Update the crd status to fail
     when: (asset_secret.resources|length) == 0
-    include_tasks: '{{ role_path }}/common/endplay.yml'
+    include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
     vars:
       RESULT_MSG: 'Failed - can not find {{ mspAsset }}-asset'
 
@@ -133,18 +135,20 @@
 
 # Now we get the orderer node info from either nodecert or node asset
 - name: Get orderer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ ordererNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get orderer node admin endpoint
   set_fact:
     ordererid: "{{ lookup('file', agentworkdir+'/'+ordererNode+'/msp/id.json') | from_json }}"
 
 - name: Get peer node info
-  include_tasks: '{{ role_path }}/common/getnodeinfo.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/getnodeinfo.yml'
   vars:
     thesecretname: "{{ peerNode }}"
+    targetdir: "{{ agentworkdir }}"
 
 - name: Get peer node admin endpoint
   set_fact:
@@ -170,12 +174,12 @@
 
 - name: Update the resource status
   when: cmdresult.rc != 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: "Failed - Orderer Org Join. {{ cmdresult.stderr }}"
 
 - name: Update the crd status
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Succeeded - Orderer Org Join'
     DOWNLOAD_MSG: >-

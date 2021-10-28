@@ -10,7 +10,7 @@
     (consoleasset.admins|default([])|length) == 0 or
     (consoleasset.tls_root_certs|default([])|length) == 0 or
     (consoleasset.root_certs|default([])|length) == 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - asset file does not have necessary information'
 

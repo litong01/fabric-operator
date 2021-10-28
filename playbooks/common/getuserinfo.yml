@@ -12,6 +12,7 @@
   include_tasks: 'endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Node cert {{node_cert}} not found'
+    KIND: "{{ KIND }}"
 
 - name: Search for the matching secret for the nodecert
   community.kubernetes.k8s_info:
@@ -26,6 +27,7 @@
   include_tasks: 'endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Secret {{ node_cert }}-{{ orgid }}-nodecert not found'
+    KIND: "{{ KIND }}"
 
 # lay out these certificates
 - name: Set up user msp directory

@@ -16,7 +16,7 @@
 
 - name: Verify the chaincode install response
   when: cmdresult.rc != 0
-  include_tasks: '{{ role_path }}/common/endplay.yml'
+  include_tasks: '{{ ROOTDIR }}/playbooks/common/endplay.yml'
   vars:
     RESULT_MSG: 'Failed - Chaincode install failed with error {{ cmdresult.stderr }}'
 

@@ -64,22 +64,22 @@
   - name: Adding the port to istio ingress deployment
     community.kubernetes.k8s:
       merge_type: strategic-merge
-      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/deployment_def.j2')|from_yaml }}"
+      definition: "{{ lookup('template', ROOTDIR+'/playbooks/network/istio/templates/deployment_def.j2')|from_yaml }}"
 
   - name: Adding the port to istio ingress service
     community.kubernetes.k8s:
       merge_type: strategic-merge
-      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/service_def.j2')|from_yaml }}"
+      definition: "{{ lookup('template', ROOTDIR+'/playbooks/network/istio/templates/service_def.j2')|from_yaml }}"
 
   - name: Create the gateway
     community.kubernetes.k8s:
       state: present
-      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/gateway_def.j2')|from_yaml }}"
+      definition: "{{ lookup('template', ROOTDIR+'/playbooks/network/istio/templates/gateway_def.j2')|from_yaml }}"
 
   - name: Create the virtual service for the node
     community.kubernetes.k8s:
       state: present
-      definition: "{{ lookup('template', role_path+'/../../playbooks/network/istio/templates/vs_def.j2')|from_yaml }}"
+      definition: "{{ lookup('template', ROOTDIR+'/playbooks/network/istio/templates/vs_def.j2')|from_yaml }}"
 
 - name: Check the existance of the gateway
   community.kubernetes.k8s_info:

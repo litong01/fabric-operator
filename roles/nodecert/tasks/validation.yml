@@ -12,3 +12,4 @@
   set_fact:
     mspid: "{{ ansible_operator_meta.name }}-{{ organization|replace('.', '-') }}"
     workdir: "{{ lookup('env','HOME') }}/vars"
+    ROOTDIR: "{{ lookup('env','HOME') }}"

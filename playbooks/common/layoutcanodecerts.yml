@@ -8,6 +8,7 @@
   include_tasks: 'endplay.yml'
   vars:
     RESULT_MSG: 'Failed - No nodeid or data provided'
+    KIND: "{{ KIND }}"
 
 - name: Set up user msp directory
   file:

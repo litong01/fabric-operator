@@ -12,7 +12,7 @@
   set_fact:
     OK: "{{ RESULT_MSG is regex('^Succeeded*') }}"
 
-- name: Update agent status
+- name: Update resource status
   operator_sdk.util.k8s_status:
     api_version: operator.fabric.hyperledger.org/v1alpha1
     kind: "{{ KIND | default('Agent') }}"

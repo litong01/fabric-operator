@@ -24,6 +24,7 @@
   include_tasks: 'endplay.yml'
   vars:
     RESULT_MSG: 'Failed - No secret name provided'
+    KIND: "{{ KIND | default('Agent') }}"
 
 - name: Search for the matching node cert secret
   community.kubernetes.k8s_info:
@@ -49,7 +50,7 @@
     include_tasks: 'endplay.yml'
     vars:
       RESULT_MSG: 'Failed - Node {{ nodecert_secret.resources[0].metadata.ownerReferences[0].name }} not found'
-      KIND: "{{ KIND }}"
+      KIND: "{{ KIND | default('Agent') }}"
 
   - name: Set node type
     set_fact:
@@ -88,6 +89,7 @@
     include_tasks: 'endplay.yml'
     vars:
       RESULT_MSG: 'Failed - Secret {{ thesecretname }}-asset not found'
+      KIND: "{{ KIND | default('Agent') }}"
 
   # Now we get the asset cert and save to the working directory
   - name: Layout asset information
