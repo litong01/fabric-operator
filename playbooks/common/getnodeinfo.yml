@@ -51,7 +51,6 @@
       RESULT_MSG: 'Failed - Node {{ nodecert_secret.resources[0].metadata.ownerReferences[0].name }} not found'
       KIND: "{{ KIND }}"
 
-
   - name: Set node type
     set_fact:
       nodetype: >-

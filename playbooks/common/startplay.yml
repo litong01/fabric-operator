@@ -1,10 +1,10 @@
-# This module update the agent with start status
+# This module update the resource with start status
 # Do this when we start a resource
 
-- name: Update agent status
+- name: Update resource status
   operator_sdk.util.k8s_status:
     api_version: operator.fabric.hyperledger.org/v1alpha1
-    kind: Agent
+    kind: "{{ KIND | default('Agent') }}"
     name: "{{ ansible_operator_meta.name }}"
     namespace: "{{ ansible_operator_meta.namespace }}"
     status:
@@ -15,6 +15,6 @@
       - type: Running
         status: "False"
         reason: "Running"
-        message: "Agent is starting"
+        message: "{{ KIND | default('Agent') | title }} is starting"
         lastTransitionTime: "{{ lookup('pipe', 'date --rfc-3339 seconds') }}"
 

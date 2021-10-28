@@ -1,8 +1,8 @@
 # This module update the agent status with 3 parameters
-#   RESULT_MSG
-#   DOWNLOAD_MSG
-#   UPLOAD_MSG
-#   KIND
+#     RESULT_MSG
+#     DOWNLOAD_MSG
+#     UPLOAD_MSG
+#     KIND
 # If DOWNLOAD_MSG or UPLOAD_MSG is not provided, empty value
 # is assume. If RESULT_MSG is not provide, Succeeded is assumed
 # KIND is the type of the resource, could be CA, Orderer, Peer,
