@@ -22,7 +22,7 @@ Example command to install istio
     istioctl install -y
 ```
 
-### For specific K8S such as Azure, OpenShift etc, please follow istio deployment [document](https://istio.io/latest/docs/setup/platform-setup)
+### For specific kubernetes such as AKS, IKS, OpenShift etc, please follow istio deployment [document](https://istio.io/latest/docs/setup/platform-setup)
 
 # To deploy the Fabric Operator to your Kubernetes cluster
 
