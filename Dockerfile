@@ -21,7 +21,6 @@ RUN yum clean all && rm -rf /var/cache/yum/* \
   && pip3 install --upgrade pip~=21.1.0 \
   && pip3 install pipenv==2020.11.15 \
   && pipenv install --deploy \
-  && pipenv check \
   && yum clean all \
   && rm -rf /var/cache/yum
 
