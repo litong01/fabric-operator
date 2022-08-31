@@ -13,7 +13,7 @@ places for installing them into your kuberentes.
 Your vendor specific k8s may require a different way to install nginx ingress
 controller, please refer to their document for installation. Here is an example:
 ```
-    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.3.0/deploy/static/provider/cloud/deploy.yam
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.3.0/deploy/static/provider/cloud/deploy.yaml
 ```
 
 [Istio](https://istio.io/latest/docs/setup/)
