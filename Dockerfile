@@ -1,7 +1,7 @@
 
-FROM quay.io/operator-framework/ansible-operator:v1.11.0 as BASE
+FROM quay.io/operator-framework/ansible-operator:v1.22.0 as BASE
 
-FROM registry.access.redhat.com/ubi8/ubi:8.4
+FROM registry.access.redhat.com/ubi8/ubi:8.6
 
 COPY Pipfile* ./
 
@@ -18,12 +18,10 @@ RUN mkdir -p /etc/ansible \
 RUN yum clean all && rm -rf /var/cache/yum/* \
   && yum update -y \
   && yum install -y unzip tar python38-pip python38-setuptools jq \
-  && pip3 install --upgrade pip~=21.1.0 \
-  && pip3 install pipenv==2020.11.15 \
-  && pipenv install --deploy \
-  && pipenv check \
-  && yum clean all \
-  && rm -rf /var/cache/yum
+  && pip3 install --upgrade pip~=22.2.2 \
+  && pip3 install pipenv==2022.8.30
+
+RUN pipenv install --deploy
 
 COPY --from=BASE /usr/local/bin/ansible-runner /usr/local/bin/ansible-runner
 COPY --from=BASE /usr/local/bin/ansible-operator /usr/local/bin/ansible-operator
