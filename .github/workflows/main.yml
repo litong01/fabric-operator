@@ -30,32 +30,39 @@ jobs:
         with:
           cluster_name: kind
 
-      - name: Deploy metallb
+      - name: Label node and deploy metallb
         run: |
-          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/namespace.yaml
-          kubectl create secret generic -n metallb-system memberlist --from-literal=secretkey="$(openssl rand -base64 128)"
-          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/master/manifests/metallb.yaml
+          kubectl label nodes kind-control-plane ingress-ready="true"
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.4/config/manifests/metallb-native.yaml
 
-      - name: Fixup metallb
+      - name: Wait for the metallb to be ready
+        run: |
+          while : ; do
+            res=$(kubectl wait --context "kind-kind" -n metallb-system pod \
+            -l component=controller,app=metallb --for=condition=Ready --timeout=120s 2>/dev/null ||true)
+            if [[ "${res}" == *"condition met"* ]]; then
+              break
+            fi
+            echo 'Waiting for metallb to be ready...'
+            sleep 15
+          done
+
+      - name: Setup metallb public ip range
         run: |
           PREFIX=$(docker network inspect -f '{{range .IPAM.Config }}{{ .Gateway }}{{end}}' kind | cut -d '.' -f1,2)
           cat <<EOF | kubectl apply -f -
-          apiVersion: v1
-          kind: ConfigMap
+          apiVersion: metallb.io/v1beta1
+          kind: IPAddressPool
           metadata:
             namespace: metallb-system
-            name: config
-          data:
-            config: |
-              address-pools:
-              - name: default
-                protocol: layer2
-                addresses:
-                - $PREFIX.255.230-$PREFIX.255.240
+            name: address-pool
+          spec:
+            addresses:
+            - $PREFIX.255.230-$PREFIX.255.240
           EOF
 
       - name: Deploy the nginx ingress controller
-        run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.48.1/deploy/static/provider/cloud/deploy.yaml
+        run: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.3.0/deploy/static/provider/cloud/deploy.yaml
 
       - name: Wait for the controller to have the external IP
         run: |
